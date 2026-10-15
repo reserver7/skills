@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # ADR authoring
 
+Read [shared rules](../../rules/development.md) once unless already in host context. Standalone installs fall back to host rules.
+
 Preserve the interview, three-perspective adversarial review, completeness gate and append-only decision history. Use the user's language and inherited LICENSE.review-skills. OpenSpec is optional; no external pitch/config/profile system is required.
 
 ## Stage 1 — Intent and environment

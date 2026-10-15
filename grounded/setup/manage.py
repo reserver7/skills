@@ -46,7 +46,8 @@ def rule_text(path):
         raise ValueError(f"Malformed managed block: {path}")
     if BEGIN in text and text.index(BEGIN) > text.index(END):
         raise ValueError(f"Reversed managed block: {path}")
-    block = BEGIN + "\n" + (ROOT / "rules/development.md").read_text().rstrip() + "\n" + END
+    version = load(ROOT / "plugin.json")["version"]
+    block = BEGIN + f"\n<!-- grounded-version: {version} -->\n" + (ROOT / "rules/development.md").read_text().rstrip() + "\n" + END
     if BEGIN in text:
         return text[:text.index(BEGIN)] + block + text[text.index(END) + len(END):]
     return text + ("\n\n" if text and not text.endswith("\n\n") else "") + block + "\n"
@@ -112,6 +113,10 @@ def project_conflicts(project, manifest, hosts):
 def validate_repo(manifest):
     if manifest["schema"] != 1:
         raise ValueError("Unsupported manifest schema")
+    plugin = load(ROOT / "plugin.json")
+    claude = load(ROOT / ".claude-plugin/plugin.json")
+    if plugin.get("version") != claude.get("version"):
+        raise ValueError("Codex and Claude plugin versions differ; run setup/release.py bump")
     names = list(manifest["local_skills"])
     for source in manifest["sources"].values():
         if not re.fullmatch(r"[0-9a-f]{40}", source["commit"]):
@@ -156,7 +161,6 @@ def fetch_source(state, name, source):
 def prepare(state, manifest, stage):
     for name in manifest["local_skills"]:
         shutil.copytree(ROOT / "skills" / name, stage / name)
-        shutil.copy2(ROOT / "LICENSE", stage / name / "LICENSE.review-skills")
     for name, source in manifest["sources"].items():
         upstream = fetch_source(state, name, source)
         for skill in source["skills"]:
@@ -277,6 +281,44 @@ def install(args, manifest, state, registry):
     print("Restart Codex/Claude. Run doctor from inside each project before development.")
 
 
+def configure(args, state):
+    print("Grounded policy version:", load(ROOT / "plugin.json")["version"])
+    hosts = ["codex", "claude"] if args.host == "both" else [args.host]
+    paths = [args.home / (".codex/AGENTS.md" if host == "codex" else ".claude/CLAUDE.md") for host in hosts]
+    blocks = {path: rule_text(path) for path in paths}
+    changes = {path: content for path, content in blocks.items()
+               if not path.exists() or path.read_text() != content}
+    for path in changes:
+        print("Configure policy:", path)
+    if args.dry_run:
+        print("Dry run: no instruction files changed")
+        return
+    if not changes:
+        print("Shared policy is already current")
+        return
+    backup = state / "backups" / str(time.time_ns())
+    backup.mkdir(parents=True)
+    saved = []
+    try:
+        for index, (path, content) in enumerate(changes.items()):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            previous = backup / f"instructions-{index}.md"
+            existed = path.exists()
+            if existed:
+                shutil.copy2(path, previous)
+            saved.append((path, previous, existed))
+            path.write_text(content)
+    except BaseException:
+        for path, previous, existed in reversed(saved):
+            if existed:
+                shutil.copy2(previous, path)
+            elif path.exists():
+                path.unlink()
+        raise
+    print("Shared policy configured. Backups:", backup)
+    print("Start a new Codex/Claude conversation to load the updated instructions.")
+
+
 def doctor(args, manifest, state, registry):
     hosts = ["codex", "claude"] if args.host == "both" else [args.host]
     errors = conflicts(args.home, manifest, registry, hosts)
@@ -318,16 +360,16 @@ def doctor(args, manifest, state, registry):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["install", "doctor", "check", "openspec"])
+    parser.add_argument("command", choices=["install", "configure", "doctor", "check", "openspec"])
     parser.add_argument("--host", choices=["codex", "claude", "both"], default="both")
     parser.add_argument("--home", type=Path, default=Path.home(), help="Installation home (default: current user's home)")
     parser.add_argument("--project", type=Path, help="Project path for doctor or OpenSpec")
-    parser.add_argument("--dry-run", action="store_true", help="Install preflight only; no writes/downloads")
+    parser.add_argument("--dry-run", action="store_true", help="Preview installation or configuration; no writes/downloads")
     args, extra = parser.parse_known_args()
     if extra and args.command != "openspec":
         parser.error("Unexpected arguments: " + " ".join(extra))
     args.home = args.home.expanduser().resolve()
-    if args.command in {"install", "doctor", "openspec"} and args.home == Path.home().resolve():
+    if args.command in {"install", "configure", "doctor", "openspec"} and args.home == Path.home().resolve():
         defaults = {"CODEX_HOME": args.home / ".codex", "CLAUDE_CONFIG_DIR": args.home / ".claude"}
         relevant = list(defaults) if args.host == "both" else ["CODEX_HOME" if args.host == "codex" else "CLAUDE_CONFIG_DIR"]
         custom = [name for name in relevant if os.environ.get(name)
@@ -340,14 +382,19 @@ def main():
     registry = load(state / "installed.json", {})
     if args.command == "check":
         print("Repository manifest, names and instruction budgets: valid (no runtime validation)")
-    elif args.command == "install":
+    elif args.command in {"install", "configure"}:
+        def apply_configuration():
+            if args.command == "configure":
+                configure(args, state)
+            else:
+                install(args, manifest, state, load(state / "installed.json", {}))
         if args.dry_run:
-            install(args, manifest, state, registry)
+            apply_configuration()
         else:
             state.mkdir(parents=True, exist_ok=True)
             with (state / "install.lock").open("w") as lock:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                install(args, manifest, state, load(state / "installed.json", {}))
+                apply_configuration()
     elif args.command == "doctor":
         doctor(args, manifest, state, registry)
     else:

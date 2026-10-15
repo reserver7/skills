@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Engineering plan review
 
+Read [shared rules](../../rules/development.md) once unless already in host context. Standalone installs fall back to host rules.
+
 Run the full four-section procedure when invoked. Use the user's language and preserve LICENSE.review-skills. This optional stage is not a code implementation pipeline.
 
 ## Phase 0 — Intake and mode

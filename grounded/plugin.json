@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "reserver7-skills",
-  "version": "0.1.0",
-  "description": "Optional CEO scope review, engineering review, and ADR authoring skills.",
+  "name": "grounded",
+  "version": "0.2.0",
+  "description": "Optional CEO scope review, engineering review, ADR authoring, and shared-rule setup.",
   "author": {
     "name": "reserver7"
   },
@@ -15,8 +15,10 @@
   ],
   "extensions": {
     "com.openai": {
+      "requires_local_executor": true,
+      "onboardingSkill": "./skills/setup/SKILL.md",
       "interface": {
-        "displayName": "Reserver7 Skills",
+        "displayName": "Grounded",
         "shortDescription": "Focused reviews and ADRs",
         "longDescription": "Three optional development skills for focused use when needed: a CEO-style scope review, an engineering plan review, and guided ADR authoring. Works with OpenSpec artifacts or a clear request and chat plan. These skills review or document decisions; they do not automatically implement changes or start other workflows.",
         "developerName": "reserver7",
@@ -26,16 +28,17 @@
         ],
         "websiteURL": "https://github.com/reserver7/skills",
         "supportURL": "https://github.com/reserver7/skills/issues",
-        "logo": "./assets/reserver7-skills.svg",
-        "composerIcon": "./assets/reserver7-skills.svg",
+        "logo": "./assets/grounded.svg",
+        "composerIcon": "./assets/grounded.svg",
         "defaultPrompt": [
-          "Use $reserver7-skills:plan-review-ceo to review scope and challenge the implementation plan.",
-          "Use $reserver7-skills:plan-review-eng to review the engineering plan and test coverage.",
-          "Use $reserver7-skills:adr to document this durable architecture decision."
+          "Use $grounded:setup to connect Grounded shared rules to this host.",
+          "Use $grounded:plan-review-ceo to review scope and challenge the implementation plan.",
+          "Use $grounded:plan-review-eng to review the engineering plan and test coverage.",
+          "Use $grounded:adr to document this durable architecture decision."
         ]
       },
       "publication": {
-        "release_notes": "Initial directory submission: CEO scope review, engineering review, and ADR authoring."
+        "release_notes": "Grounded 0.2.0: shared-rule onboarding, unified plugin layout, and version-checked release packages."
       }
     }
   }
