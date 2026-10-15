@@ -35,4 +35,6 @@ git push origin skills-v0.1.1
 
 ## GitHub protection
 
-Protect `main` from force-push and deletion. This private repository's current GitHub plan does not allow branch-protection rules, so this is currently a contributor policy rather than a server-enforced setting. Do not make the repository public solely to enable that setting.
+The repository is public, so anyone can view and fork it. Writing requires explicitly granted repository access; repository administration, including changing visibility or deleting the repository, is limited to owners and administrators.
+
+An active ruleset targets `refs/heads/main` and blocks force-pushes and branch deletion. It has no bypass actors. Repository owners and administrators can still change or remove the ruleset, so keep repository access limited to trusted collaborators.
