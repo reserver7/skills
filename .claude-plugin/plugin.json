@@ -1,0 +1,10 @@
+{
+  "name": "reserver7-skills",
+  "version": "0.1.0",
+  "description": "Optional CEO scope review, engineering review, and ADR authoring skills.",
+  "author": {
+    "name": "reserver7"
+  },
+  "repository": "https://github.com/reserver7/skills",
+  "license": "MIT"
+}
