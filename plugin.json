@@ -1,0 +1,42 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "reserver7-skills",
+  "version": "0.1.0",
+  "description": "Optional CEO scope review, engineering review, and ADR authoring skills.",
+  "author": {
+    "name": "reserver7"
+  },
+  "repository": "https://github.com/reserver7/skills",
+  "license": "MIT",
+  "keywords": [
+    "code review",
+    "architecture decision records",
+    "software development"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Reserver7 Skills",
+        "shortDescription": "Focused reviews and ADRs",
+        "longDescription": "Three optional development skills for focused use when needed: a CEO-style scope review, an engineering plan review, and guided ADR authoring. Works with OpenSpec artifacts or a clear request and chat plan. These skills review or document decisions; they do not automatically implement changes or start other workflows.",
+        "developerName": "reserver7",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Reusable development skills"
+        ],
+        "websiteURL": "https://github.com/reserver7/skills",
+        "supportURL": "https://github.com/reserver7/skills/issues",
+        "logo": "./assets/reserver7-skills.svg",
+        "composerIcon": "./assets/reserver7-skills.svg",
+        "defaultPrompt": [
+          "Use $reserver7-skills:plan-review-ceo to review scope and challenge the implementation plan.",
+          "Use $reserver7-skills:plan-review-eng to review the engineering plan and test coverage.",
+          "Use $reserver7-skills:adr to document this durable architecture decision."
+        ]
+      },
+      "publication": {
+        "release_notes": "Initial directory submission: CEO scope review, engineering review, and ADR authoring."
+      }
+    }
+  }
+}
