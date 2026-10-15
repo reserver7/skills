@@ -221,6 +221,8 @@ Git revisions identify this environment's rules, installer, and local skills. [m
 
 The release workflow uses `skills-v*` tags. OpenSpec's top-level npm version is pinned, but its complete transitive dependency closure is not locked in this repository.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch, pull request, commit, and release practices.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). The root license includes the inherited review and ADR notice. Installed external skills retain their upstream license files.
