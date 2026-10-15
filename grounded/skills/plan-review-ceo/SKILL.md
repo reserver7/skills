@@ -6,12 +6,14 @@ disable-model-invocation: true
 
 # CEO plan review
 
-Run the full review when invoked, not a summary checklist. Use the user's language. This is one optional stage, not an entire development pipeline. Preserve the inherited notice in LICENSE.review-skills.
+Read [shared rules](../../rules/development.md) once unless already in host context. Standalone installs fall back to host rules.
+
+Run all eleven sections, not a checklist. Use the user's language and LICENSE.review-skills. Never start implementation.
 
 ## Integration contract
 
 - Input: named OpenSpec proposal/specs/design/tasks and applicable prior decisions. Without SDD, use the agreed request/chat plan; do not force OpenSpec solely to review.
-- OpenSpec owns requirements/design/tasks. A review note records findings and approvals, not another PRD or implementation plan. Replace former pitch/handoff inputs with those existing documents.
+- OpenSpec owns requirements/design/tasks. A review note records findings and approvals, not another PRD or implementation plan. Use these documents as pitch/handoff inputs.
 - Superpowers/Ponytail implement and review code later. Here, inspect code for evidence but do not implement, run a second code review, start worktrees/agents, call Jev or invoke another stage automatically.
 - Use the host's actual read/search/question tools. If a question tool is unavailable, ask in chat and wait. Do not fabricate answers or confirmations. Respect explicit delegation already given by the user.
 

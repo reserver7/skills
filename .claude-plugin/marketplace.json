@@ -1,14 +1,14 @@
 {
-  "name": "reserver7-skills",
-  "description": "Optional development review and architecture decision skills for Claude Code and Codex.",
+  "name": "grounded",
+  "description": "Grounded review and architecture decision skills for Claude Code and Codex.",
   "owner": {
     "name": "reserver7"
   },
   "plugins": [
     {
-      "name": "reserver7-skills",
-      "source": ".",
-      "description": "Optional CEO scope review, engineering review, and ADR authoring skills."
+      "name": "grounded",
+      "source": "./grounded",
+      "description": "Optional CEO scope review, engineering review, ADR authoring, and shared-rule setup."
     }
   ]
 }

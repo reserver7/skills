@@ -37,3 +37,5 @@ The installed skills are a curated subset. Do not install/activate full overlapp
 ## Commit messages
 
 When creating a commit, use Conventional Commits: `type(optional-scope): imperative summary`. Choose a specific type such as `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, or `revert`; mark breaking changes with `!`.
+
+For releases, follow the target repository's documented version/tag scheme. Synchronize canonical and host-specific manifests before tagging; reject a tag/version mismatch. Build from the tagged source. Publishing a GitHub Release does not by itself publish a provider marketplace update. For Grounded itself, use its bundled `setup/release.py` and repository release instructions.

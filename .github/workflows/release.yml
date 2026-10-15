@@ -16,12 +16,32 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Require a commit on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate and package tagged version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 -B -m unittest discover -s grounded/setup -p 'test_*.py'
+          python3 grounded/setup/manage.py check
+          VERSION="${TAG#skills-v}"
+          python3 grounded/setup/release.py package \
+            --tag "$TAG" \
+            --output "$RUNNER_TEMP/grounded-${VERSION}.zip"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
-          VERSION="${TAG#skills-}"
-          gh release create "$TAG" \
-            --title "$VERSION" \
+          VERSION="${TAG#skills-v}"
+          gh release create "$TAG" "$RUNNER_TEMP/grounded-${VERSION}.zip" \
+            --verify-tag \
+            --title "Grounded v$VERSION" \
             --generate-notes

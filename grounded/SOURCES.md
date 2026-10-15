@@ -28,5 +28,5 @@ OpenSpec pins the top-level npm package; its transitive dependency closure is no
 - The common policy defines ownership and when SDD is unnecessary; it is not a second orchestrator or a copied implementation manual.
 
 These are compatibility adaptations of preexisting local procedures and selected Superpowers skills. No equivalence in review quality or measured token savings is claimed.
-The inherited review/ADR copyright notice is consolidated into the root [LICENSE](LICENSE) and copied into each local skill as `LICENSE.review-skills`, so direct per-skill downloads remain self-contained. External Superpowers and Ponytail skills retain their own upstream license files during managed installation.
+The inherited review/ADR copyright notice is consolidated into the root [LICENSE](../LICENSE) and copied into each local skill as `LICENSE.review-skills`, so direct per-skill downloads remain self-contained. External Superpowers and Ponytail skills retain their own upstream license files during managed installation.
 Michael Nygard's Context / Decision / Consequences ADR structure is acknowledged.
