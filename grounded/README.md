@@ -4,7 +4,7 @@ A collection of development skills and setup tools for **Codex and Claude Code**
 
 Use **OpenSpec** for Spec-Driven Development (SDD) when the work needs it, **Superpowers** for implementation techniques, and **Ponytail** for small, complete changes. Add CEO-style plan review, engineering review, ADR authoring, or Jev evaluation only when needed.
 
-This repository recreates that environment on another computer through pinned dependencies, shared rules, and standalone skills. The optional review skills are prepared for the native Codex and Claude directories; users can install them there once each listing is approved and published. The full setup installs pinned dependencies and shared rules. There is no unified router or mandatory end-to-end pipeline.
+This repository recreates that environment on another computer through pinned dependencies, shared rules, and standalone skills. Grounded is distributed through its own plugin marketplace: the host downloads it after a one-time source registration, with no manual Git clone. Codex CLI registration and installation have been verified; the public OpenAI directory submission is blocked by its current skills-only eligibility check. The full managed setup installs pinned dependencies and shared rules. There is no unified router or mandatory end-to-end pipeline.
 
 ## Skills and tools
 
@@ -22,19 +22,33 @@ This repository recreates that environment on another computer through pinned de
 
 ## Quick start
 
-### Install from the native directories
+### Install from the Grounded marketplace
 
 These methods install `adr`, `plan-review-ceo`, `plan-review-eng`, and the `setup` helper. After installation, run setup once per host to connect shared rules. OpenSpec, Superpowers, and Ponytail are separate dependencies.
 
-**Codex:** Open the plugin browser with `/plugins`, search for **Grounded**, and choose **Install plugin**. The same public listing is available in the Codex app's Plugins Directory.
+**Codex:** Add the marketplace source once per computer, then install the plugin:
+
+```sh
+codex plugin marketplace add reserver7/skills --ref main
+codex plugin add grounded@grounded
+```
+
+The host downloads the repository into its managed marketplace cache and installs the plugin from `grounded/`; users do not clone or maintain a source checkout. Restart Codex or start a new session, then use `/plugins` to manage the installed plugin.
 
 After installation, run `$grounded:setup` (also exposed as plugin onboarding), then start a new conversation. Invoke `$grounded:adr`, `$grounded:plan-review-ceo`, or `$grounded:plan-review-eng` when needed.
 
-**Claude Code:** Open `/plugin`, select **Discover**, search for **Grounded**, and install it from the Claude directory.
+**Claude Code:** The repository also carries a Claude marketplace catalog. The following is the documented setup; installation in Claude has not yet been verified:
+
+```text
+/plugin marketplace add reserver7/skills
+/plugin install grounded@grounded
+```
 
 After installation, run `/grounded:setup`, then start a new conversation. Invoke `/grounded:adr`, `/grounded:plan-review-ceo`, or `/grounded:plan-review-eng` when needed.
 
-The listings become searchable after each provider approves and publishes the submission. Users then install from the product directory; neither setup requires cloning this repository or adding its marketplace manually. See the [Claude plugin directory](https://claude.com/marketplace/plugins) and [Codex plugin packaging guide](https://developers.openai.com/plugins/build/plugins) for details.
+Custom marketplaces are separate from the providers' public directories and do not require a public-directory listing. Users register the source once per host and computer. Grounded is not currently published in either public directory. See the [Claude marketplace guide](https://code.claude.com/docs/en/plugin-marketplaces) and [Codex plugin packaging guide](https://developers.openai.com/plugins/build/plugins).
+
+For Codex updates, run `codex plugin marketplace upgrade grounded`, then `codex plugin add grounded@grounded`, restart the host, and rerun `$grounded:setup`. The configured source tracks `main`; release tags and ZIP assets remain available for versioned distribution.
 
 Use either native installation or the full managed setup below for a host, not both; installing the same skills through both paths can create duplicate entries. Each downloaded skill includes its license notice and Codex metadata.
 
