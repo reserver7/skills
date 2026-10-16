@@ -38,6 +38,12 @@ def skill_name(path):
     return match.group(1) if match else path.parent.name
 
 
+def safe_component(value):
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", value):
+        raise ValueError(f"Unsafe plugin path component: {value!r}")
+    return value
+
+
 def rule_text(path):
     if path.is_symlink():
         raise ValueError(f"Instruction file is a symlink; manage it explicitly: {path}")
@@ -67,9 +73,7 @@ def conflicts(home, manifest, registry, hosts):
     for root in roots:
         if not root.exists():
             continue
-        # Include linked top-level skill folders without recursively following arbitrary links.
-        files = set(root.rglob("SKILL.md"))
-        files.update(p / "SKILL.md" for p in root.iterdir() if (p / "SKILL.md").is_file())
+        files = {p / "SKILL.md" for p in root.iterdir() if (p / "SKILL.md").is_file()}
         for file in files:
             if skill_name(file) not in banned:
                 continue
@@ -88,6 +92,148 @@ def conflicts(home, manifest, registry, hosts):
         if enabled and name.split("@")[0] in manifest["incompatible_plugins"]:
             errors.append(f"Enabled overlapping plugin: {name}; disable it in that host first")
     return errors
+
+
+def native_conflicts(args, manifest, registry, backup):
+    """Move known global skill duplicates aside and disable overlapping host plugins."""
+    hosts = ["codex", "claude"] if args.host == "both" else [args.host]
+    names = set(manifest["local_skills"] + manifest["incompatible_skills"])
+    dependency_names = set()
+    for source in manifest["sources"].values():
+        names.update(source["skills"])
+        dependency_names.update(source["skills"])
+    roots = [args.home / ".agents/skills"]
+    if "codex" in hosts:
+        roots.append(args.home / ".codex/skills")
+    if "claude" in hosts:
+        roots.append(args.home / ".claude/skills")
+    skills = []
+    for root in roots:
+        if root.is_dir():
+            for path in root.iterdir():
+                skill = path / "SKILL.md"
+                if skill.is_file() and skill_name(skill) in names:
+                    name = skill_name(skill)
+                    expected = registry.get("skills", {}).get(str(path))
+                    if name in dependency_names and expected is not None and hashes(path) == expected:
+                        continue
+                    skills.append(path)
+
+    plugins = {"codex": [], "claude": []}
+    codex_list = None
+    if "codex" in hosts and shutil.which("codex"):
+        try:
+            codex_list = json.loads(run("codex", "plugin", "list", "--json"))
+        except (subprocess.CalledProcessError, json.JSONDecodeError) as error:
+            raise ValueError(f"Could not inspect Codex plugins safely: {error}") from error
+        for plugin in codex_list.get("installed", []):
+            plugin_id = plugin.get("pluginId", "")
+            if plugin.get("enabled") and plugin.get("name") in manifest["incompatible_plugins"]:
+                plugins["codex"].append(plugin)
+    elif "codex" in hosts:
+        codex = args.home / ".codex/config.toml"
+        if codex.exists():
+            settings = tomllib.loads(codex.read_text()).get("plugins", {})
+            if any(v.get("enabled") and k.split("@")[0] in manifest["incompatible_plugins"]
+                   for k, v in settings.items() if isinstance(v, dict)):
+                raise ValueError("Install the Codex CLI to migrate overlapping plugins safely")
+
+    if "claude" in hosts:
+        settings = load(args.home / ".claude/settings.json", {})
+        plugins["claude"] = [name for name, enabled in settings.get("enabledPlugins", {}).items()
+                             if enabled and name.split("@")[0] in manifest["incompatible_plugins"]]
+        if plugins["claude"] and not shutil.which("claude"):
+            raise ValueError("Install the Claude CLI to disable overlapping plugins safely")
+
+    print("Local duplicate skills to archive:", ", ".join(map(str, skills)) or "none")
+    print("Codex plugins to remove:", ", ".join(p["pluginId"] for p in plugins["codex"]) or "none")
+    print("Claude plugins to disable:", ", ".join(plugins["claude"]) or "none")
+    if args.dry_run:
+        return None
+
+    backup.mkdir(parents=True, exist_ok=False)
+    backup.chmod(0o700)
+    saved_settings = []
+    for host, paths in {
+        "codex": [args.home / ".codex/config.toml", args.home / ".codex/AGENTS.md"],
+        "claude": [args.home / ".claude/settings.json", args.home / ".claude/CLAUDE.md"],
+    }.items():
+        if host in hosts:
+            for index, source in enumerate(paths):
+                if source.is_file():
+                    target = backup / "settings" / host / f"{index}-{source.name}"
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source, target)
+                    saved_settings.append({"source": str(source), "backup": str(target)})
+
+    moved = []
+    removed_plugins = []
+    disabled_plugins = []
+    try:
+        for plugin in plugins["codex"]:
+            marketplace = safe_component(plugin.get("marketplaceName", ""))
+            name = safe_component(plugin.get("name", ""))
+            plugin_id = plugin.get("pluginId", "")
+            if not re.fullmatch(r"[A-Za-z0-9._-]+@[A-Za-z0-9._-]+", plugin_id):
+                raise ValueError(f"Unsafe Codex plugin identifier: {plugin_id!r}")
+            for label, source, relative in [
+                ("cache", args.home / ".codex/plugins/cache" / marketplace / name, Path(marketplace) / name),
+                ("marketplace", args.home / ".codex/.tmp/marketplaces" / marketplace, Path(marketplace)),
+            ]:
+                if source.exists():
+                    target = backup / "codex-plugin-data" / label / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copytree(source, target, symlinks=True)
+            subprocess.run(["codex", "plugin", "remove", plugin_id, "--json"], check=True,
+                           stdout=subprocess.DEVNULL)
+            removed_plugins.append(plugin_id)
+        for plugin_id in plugins["claude"]:
+            subprocess.run(["claude", "plugin", "disable", plugin_id, "--scope", "user"], check=True,
+                           stdout=subprocess.DEVNULL)
+            disabled_plugins.append(plugin_id)
+        for index, source in enumerate(skills):
+            target = backup / "skills" / f"{index}-{source.parent.name}-{source.name}"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            source.rename(target)
+            moved.append((source, target))
+        metadata = {"hosts": hosts, "archived_skills": [{"source": str(s), "backup": str(t)} for s, t in moved],
+                    "removed_codex_plugins": removed_plugins, "disabled_claude_plugins": disabled_plugins,
+                    "settings": saved_settings}
+        (backup / "migration.json").write_text(json.dumps(metadata, indent=2) + "\n")
+        return backup
+    except BaseException:
+        for source, target in reversed(moved):
+            if target.exists():
+                source.parent.mkdir(parents=True, exist_ok=True)
+                target.rename(source)
+        for plugin_id in disabled_plugins:
+            subprocess.run(["claude", "plugin", "enable", plugin_id, "--scope", "user"], check=False,
+                           stdout=subprocess.DEVNULL)
+        for plugin_id in removed_plugins:
+            subprocess.run(["codex", "plugin", "add", plugin_id], check=False,
+                           stdout=subprocess.DEVNULL)
+        raise
+
+
+def restore_native_conflicts(backup, args):
+    metadata = load(backup / "migration.json", {})
+    errors = []
+    for entry in metadata.get("archived_skills", []):
+        source, saved = Path(entry["source"]), Path(entry["backup"])
+        if saved.exists():
+            source.parent.mkdir(parents=True, exist_ok=True)
+            saved.rename(source)
+    for plugin_id in metadata.get("disabled_claude_plugins", []):
+        result = subprocess.run(["claude", "plugin", "enable", plugin_id, "--scope", "user"],
+                                capture_output=True, text=True)
+        if result.returncode:
+            errors.append(f"Claude {plugin_id}: {result.stderr.strip()}")
+    for plugin_id in metadata.get("removed_codex_plugins", []):
+        result = subprocess.run(["codex", "plugin", "add", plugin_id], capture_output=True, text=True)
+        if result.returncode:
+            errors.append(f"Codex {plugin_id}: {result.stderr.strip()}")
+    if errors:
+        raise ValueError("Could not restore overlapping plugins; use backup at " + str(backup) + ": " + "; ".join(errors))
 
 
 def project_conflicts(project, manifest, hosts):
@@ -188,7 +334,8 @@ def install(args, manifest, state, registry):
     errors = conflicts(args.home, manifest, registry, hosts)
     destinations = [args.home / (".agents/skills" if h == "codex" else ".claude/skills") for h in hosts]
     instructions = [args.home / (".codex/AGENTS.md" if h == "codex" else ".claude/CLAUDE.md") for h in hosts]
-    names = manifest["local_skills"] + [n for s in manifest["sources"].values() for n in s["skills"]]
+    source_names = [n for s in manifest["sources"].values() for n in s["skills"]]
+    names = source_names if args.native_plugin else manifest["local_skills"] + source_names
     stale = [Path(p) for p in registry.get("skills", {})
              if Path(p).parent in destinations and Path(p).name not in names]
     for dest in stale:
@@ -260,6 +407,7 @@ def install(args, manifest, state, registry):
                 path.write_text(content)
             registry["manifest_sha256"] = hashlib.sha256((ROOT / "manifest.json").read_bytes()).hexdigest()
             registry["repository"] = str(ROOT)
+            registry["mode"] = "native-plugin" if args.native_plugin else "standalone"
             temporary = state / "installed.tmp"
             temporary.write_text(json.dumps(registry, indent=2) + "\n")
             temporary.replace(state / "installed.json")
@@ -279,6 +427,34 @@ def install(args, manifest, state, registry):
             raise
     print("Installed. Backups:", backup)
     print("Restart Codex/Claude. Run doctor from inside each project before development.")
+
+
+def setup(args, manifest, state, registry):
+    for tool in ["git", "node", "npm"]:
+        if not shutil.which(tool):
+            raise ValueError(f"Install prerequisite first: {tool}")
+    version = tuple(int(x) for x in run("node", "--version").lstrip("v").split(".")[:3])
+    if version < (20, 19, 0):
+        raise ValueError("Node.js >=20.19.0 is required")
+    backup = args.home / ".local/share/grounded/migration-backups" / str(time.time_ns())
+    args.native_plugin = True
+    if args.dry_run:
+        native_conflicts(args, manifest, registry, backup)
+        print("Grounded dependencies and shared rules will be installed; no writes or downloads.")
+        return
+    state.mkdir(parents=True, exist_ok=True)
+    with (state / "install.lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        snapshot = native_conflicts(args, manifest, registry, backup)
+        try:
+            install(args, manifest, state, load(state / "installed.json", {}))
+        except BaseException as error:
+            try:
+                restore_native_conflicts(snapshot, args)
+            except (OSError, ValueError, subprocess.SubprocessError) as restore_error:
+                raise ValueError(f"Setup failed ({error}); automatic recovery was incomplete ({restore_error})") from error
+            raise
+    print("Grounded setup complete. Existing overlapping skills and plugin data are backed up at:", backup)
 
 
 def configure(args, state):
@@ -322,7 +498,8 @@ def configure(args, state):
 def doctor(args, manifest, state, registry):
     hosts = ["codex", "claude"] if args.host == "both" else [args.host]
     errors = conflicts(args.home, manifest, registry, hosts)
-    names = manifest["local_skills"] + [n for s in manifest["sources"].values() for n in s["skills"]]
+    source_names = [n for s in manifest["sources"].values() for n in s["skills"]]
+    names = source_names if registry.get("mode") == "native-plugin" else manifest["local_skills"] + source_names
     for host in hosts:
         base = args.home / (".agents/skills" if host == "codex" else ".claude/skills")
         for name in names:
@@ -360,7 +537,7 @@ def doctor(args, manifest, state, registry):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["install", "configure", "doctor", "check", "openspec"])
+    parser.add_argument("command", choices=["setup", "install", "configure", "doctor", "check", "openspec"])
     parser.add_argument("--host", choices=["codex", "claude", "both"], default="both")
     parser.add_argument("--home", type=Path, default=Path.home(), help="Installation home (default: current user's home)")
     parser.add_argument("--project", type=Path, help="Project path for doctor or OpenSpec")
@@ -369,7 +546,7 @@ def main():
     if extra and args.command != "openspec":
         parser.error("Unexpected arguments: " + " ".join(extra))
     args.home = args.home.expanduser().resolve()
-    if args.command in {"install", "configure", "doctor", "openspec"} and args.home == Path.home().resolve():
+    if args.command in {"setup", "install", "configure", "doctor", "openspec"} and args.home == Path.home().resolve():
         defaults = {"CODEX_HOME": args.home / ".codex", "CLAUDE_CONFIG_DIR": args.home / ".claude"}
         relevant = list(defaults) if args.host == "both" else ["CODEX_HOME" if args.host == "codex" else "CLAUDE_CONFIG_DIR"]
         custom = [name for name in relevant if os.environ.get(name)
@@ -382,13 +559,18 @@ def main():
     registry = load(state / "installed.json", {})
     if args.command == "check":
         print("Repository manifest, names and instruction budgets: valid (no runtime validation)")
-    elif args.command in {"install", "configure"}:
+    elif args.command in {"setup", "install", "configure"}:
         def apply_configuration():
-            if args.command == "configure":
+            if args.command == "setup":
+                setup(args, manifest, state, registry)
+            elif args.command == "configure":
                 configure(args, state)
             else:
+                args.native_plugin = False
                 install(args, manifest, state, load(state / "installed.json", {}))
         if args.dry_run:
+            apply_configuration()
+        elif args.command == "setup":
             apply_configuration()
         else:
             state.mkdir(parents=True, exist_ok=True)
