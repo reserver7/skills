@@ -26,7 +26,7 @@ Restart Codex or start a new session, then open `/plugins` to manage Grounded. T
 | Codex | `$grounded:adr`, `$grounded:plan-review-ceo`, `$grounded:plan-review-eng` |
 | Claude Code | `/grounded:adr`, `/grounded:plan-review-ceo`, `/grounded:plan-review-eng` |
 
-After marketplace installation, run `$grounded:setup` in Codex or `/grounded:setup` in Claude Code once per host, then start a new conversation. Setup connects shared rules to the host's user instructions across workspaces, preserving personal instructions and backing up changes. Rerun setup after plugin updates to refresh the rules. External tools are configured separately; setup does not install duplicate review skills. See the [Grounded README](grounded/README.md).
+After marketplace installation, run `$grounded:setup` in Codex or `/grounded:setup` in Claude Code once per host, then start a new conversation. Setup installs Grounded's pinned OpenSpec, Superpowers, and Ponytail components, connects shared rules across workspaces, and archives overlapping local skills/plugins before disabling them. Unrelated personal skills remain. Rerun setup after plugin updates. See the [Grounded README](grounded/README.md) for prerequisites and backup details.
 
 To update Codex's marketplace and refresh the plugin:
 

@@ -24,7 +24,7 @@ This repository recreates that environment on another computer through pinned de
 
 ### Install from the Grounded marketplace
 
-These methods install `adr`, `plan-review-ceo`, `plan-review-eng`, and the `setup` helper. After installation, run setup once per host to connect shared rules. OpenSpec, Superpowers, and Ponytail are separate dependencies.
+The marketplace installs Grounded's `adr`, `plan-review-ceo`, `plan-review-eng`, and `setup` skills. Run setup once per host to install the pinned OpenSpec package and selected Superpowers/Ponytail skills, connect shared rules, and archive known overlaps.
 
 **Codex:** Add the marketplace source once per computer, then install the plugin:
 
@@ -35,7 +35,7 @@ codex plugin add grounded@grounded
 
 The host downloads the repository into its managed marketplace cache and installs the plugin from `grounded/`; users do not clone or maintain a source checkout. Restart Codex or start a new session, then use `/plugins` to manage the installed plugin.
 
-After installation, run `$grounded:setup` (also exposed as plugin onboarding), then start a new conversation. Invoke `$grounded:adr`, `$grounded:plan-review-ceo`, or `$grounded:plan-review-eng` when needed.
+After installation, run `$grounded:setup` (also exposed as plugin onboarding). Setup requires macOS/Linux, Python 3.11+, Git, Node.js 20.19+, and npm. It backs up current host settings and conflicting global skill folders, removes overlapping `superpowers`/`ponytail` Codex plugins, installs Grounded's pinned implementation skills without duplicating Grounded's review skills, and connects shared rules. Then start a new conversation. Invoke `$grounded:adr`, `$grounded:plan-review-ceo`, or `$grounded:plan-review-eng` when needed.
 
 **Claude Code:** The repository also carries a Claude marketplace catalog. The following is the documented setup; installation in Claude has not yet been verified:
 
@@ -44,13 +44,13 @@ After installation, run `$grounded:setup` (also exposed as plugin onboarding), t
 /plugin install grounded@grounded
 ```
 
-After installation, run `/grounded:setup`, then start a new conversation. Invoke `/grounded:adr`, `/grounded:plan-review-ceo`, or `/grounded:plan-review-eng` when needed.
+After installation, run `/grounded:setup`. It installs the same pinned implementation skills for Claude, disables conflicting user-scope plugins after backing up settings, and connects shared rules. Then start a new conversation. Invoke `/grounded:adr`, `/grounded:plan-review-ceo`, or `/grounded:plan-review-eng` when needed.
 
 Custom marketplaces are separate from the providers' public directories and do not require a public-directory listing. Users register the source once per host and computer. Grounded is not currently published in either public directory. See the [Claude marketplace guide](https://code.claude.com/docs/en/plugin-marketplaces) and [Codex plugin packaging guide](https://developers.openai.com/plugins/build/plugins).
 
 For Codex updates, run `codex plugin marketplace upgrade grounded`, then `codex plugin add grounded@grounded`, restart the host, and rerun `$grounded:setup`. The configured source tracks `main`; release tags and ZIP assets remain available for versioned distribution.
 
-Use either native installation or the full managed setup below for a host, not both; installing the same skills through both paths can create duplicate entries. Each downloaded skill includes its license notice and Codex metadata.
+The marketplace setup is the recommended path. It uses the native plugin for Grounded's own skills and installs only the pinned shared dependencies as user skills. The optional standalone installer below is for maintainers who do not use the marketplace plugin; do not use both paths on the same host. Each downloaded skill includes its license notice and Codex metadata.
 
 ### Optional maintainer environment setup
 
@@ -107,11 +107,11 @@ Calling one review does not run the other reviews, create an ADR, start implemen
 
 ## Skills
 
-### `setup` — shared rules after marketplace installation
+### `setup` — global Grounded environment after marketplace installation
 
-Run `$grounded:setup` or `/grounded:setup` once for the current host. It runs the bundled `setup/manage.py configure --host codex` or `--host claude` from the downloaded plugin, with no manual Git clone. Python 3.11+ is required. It adds or refreshes one managed policy block in `~/.codex/AGENTS.md` or `~/.claude/CLAUDE.md`, preserves personal instructions, backs up changed files, and leaves already-current rules unchanged. It does not install standalone skills or external tools.
+Run `$grounded:setup` or `/grounded:setup` once for the current host. It runs the bundled manager from the downloaded plugin, with no manual Git clone. It installs the manifest-pinned OpenSpec package and selected Superpowers/Ponytail skills, adds or refreshes one managed policy block in `~/.codex/AGENTS.md` or `~/.claude/CLAUDE.md`, and preserves personal instructions. Before switching to Grounded-managed dependencies, it backs up and archives known overlapping global skill folders and disables conflicting plugins. Unrelated personal skills and project-level files are left alone.
 
-Start a new conversation after setup. Rerun setup after plugin updates; the policy is a persisted snapshot, marked with `grounded-version` so the configured version can be inspected. Disabling or uninstalling the plugin does not remove it. To remove it, remove only the block between `<!-- skills-environment:begin -->` and `<!-- skills-environment:end -->` in the configured host instruction file.
+Setup requires Python 3.11+, Git, Node.js 20.19+, and npm. It stores migration backups under `~/.local/share/grounded/migration-backups/` and installer state under `~/.local/share/skills-environment/`. Start a new conversation after setup. Rerun setup after plugin updates; the policy is a persisted snapshot, marked with `grounded-version`. Disabling or uninstalling the plugin does not remove it. To remove it, remove only the block between `<!-- skills-environment:begin -->` and `<!-- skills-environment:end -->` in the configured host instruction file.
 
 Each review skill also reads the bundled shared policy when it is not already in host context. Standalone managed installs use the host instructions. Detailed docs remain references loaded only when relevant, not an automatic context payload.
 
@@ -249,9 +249,9 @@ python3 setup/manage.py install
 python3 setup/manage.py doctor --project /path/to/project
 ```
 
-Known overlapping skills/plugins and unmanaged or edited destinations stop installation. Resolve them explicitly; setup does not delete personal installations. Obsolete, unmodified skills previously installed by this setup are backed up and removed during updates.
+The marketplace `setup` command archives exact-name overlapping global skills and disables/removes conflicting plugins before installing the pinned set. It leaves unrelated personal skills and project-level files alone. The separate standalone `install` command still stops on unmanaged overlaps or edited destinations. Obsolete, unmodified skills previously installed by the standalone installer are backed up and removed during updates.
 
-Backups preserve previous instruction files and replaced managed skills. A deployment failure rolls back skill and instruction changes; downloaded sources and npm state may remain. Setup does not edit shell startup files or install host applications.
+Backups preserve previous instruction files, archived global skills, and Codex plugin caches/marketplace sources. If installation fails, setup restores archived skills and attempts to restore disabled plugins; downloaded sources and npm state may remain. Setup does not edit shell startup files or install host applications.
 
 Use `python3 /path/to/skills/grounded/setup/manage.py openspec --project /path/to/project -- <arguments>` to invoke the managed OpenSpec version. A plain `openspec` command may select another version on PATH.
 
