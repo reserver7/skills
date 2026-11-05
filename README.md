@@ -1,5 +1,7 @@
 # skills
 
+[![Latest release](https://img.shields.io/github/v/release/reserver7/skills?filter=skills-v%2A&sort=semver)](https://github.com/reserver7/skills/releases/latest)
+
 Development skills and plugins for Codex and Claude Code.
 
 ## Plugins
@@ -10,36 +12,51 @@ Development skills and plugins for Codex and Claude Code.
 
 ## Quick start
 
-Install **Grounded** from its own marketplace. Add the source once on each computer; Codex downloads and manages the plugin, so no manual Git clone is required. This is a custom marketplace, separate from the public OpenAI directory.
+Grounded supports Codex marketplace installation. Claude Code currently uses a local clone; Claude marketplace distribution is planned but is not the supported installation path yet.
 
-For Codex, run these commands in a terminal:
+### Codex
+
+Add the marketplace once per computer and install the plugin:
 
 ```sh
 codex plugin marketplace add reserver7/skills --ref main
 codex plugin add grounded@grounded
 ```
 
-Restart Codex or start a new session, then open `/plugins` to manage Grounded. The marketplace is named `grounded` and the plugin is `grounded@grounded`. This installation was verified with Codex CLI; Claude installation is documented separately in the [Grounded README](grounded/README.md).
+The marketplace is named `grounded` and the plugin is `grounded@grounded`. Codex installation was verified with Codex CLI. Start a new Codex conversation after installing.
+
+### Claude Code (local clone)
+
+Clone the repository once, then load Grounded from the target project with Claude Code's `--plugin-dir` option:
+
+```sh
+git clone https://github.com/reserver7/skills.git ~/grounded-skills
+cd /path/to/your/project
+claude --plugin-dir ~/grounded-skills/grounded
+```
+
+Start Claude from the same command after updating the clone. Run `/grounded:setup` once per host after installation and after plugin updates.
 
 | Host | After installation |
 |---|---|
 | Codex | `$grounded:adr`, `$grounded:plan-review-ceo`, `$grounded:plan-review-eng` |
 | Claude Code | `/grounded:adr`, `/grounded:plan-review-ceo`, `/grounded:plan-review-eng` |
 
-After marketplace installation, run `$grounded:setup` in Codex or `/grounded:setup` in Claude Code once per host, then start a new conversation. Setup installs Grounded's pinned OpenSpec, Superpowers, and Ponytail components, connects shared rules across workspaces, and archives overlapping local skills/plugins before disabling them. Unrelated personal skills remain. Rerun setup after plugin updates. See the [Grounded README](grounded/README.md) for prerequisites and backup details.
+After loading the plugin, run `$grounded:setup` in Codex or `/grounded:setup` in Claude Code once per host, then start a new conversation. Setup resolves the latest stable OpenSpec, Superpowers, and Ponytail releases, connects shared rules across workspaces, and archives overlapping local skills/plugins before disabling them. Unrelated personal skills remain. Rerun setup after plugin updates to refresh the persisted rules and `grounded-version` marker. See the [Grounded README](grounded/README.md) for prerequisites, restore/uninstall commands, and backup details.
 
-To update Codex's marketplace and refresh the plugin:
+Codex checks configured Git marketplaces at startup and refreshes installed plugins when their sources change. Grounded tracks `main`, so changes merged there become available on a subsequent Codex startup; a GitHub Release does not push an update to a running host.
+
+To refresh immediately from a terminal:
 
 ```sh
 codex plugin marketplace upgrade grounded
-codex plugin add grounded@grounded
 ```
 
-Run `$grounded:setup` after updating to refresh shared rules. Releases keep their `skills-v<version>` tags and ZIP assets; the default marketplace source follows `main`.
+After each plugin update, rerun `$grounded:setup` to refresh the persisted policy and version marker. `codex plugin add grounded@grounded` is for initial installation, not routine updates. For Claude, update the clone with `git -C ~/grounded-skills pull --ff-only`, then start a new Claude session with `--plugin-dir ~/grounded-skills/grounded` and run `/grounded:setup`. Releases keep their `skills-v<version>` tags and ZIP assets; the Codex marketplace source follows `main`.
 
 ## Repository structure
 
-Grounded's skills, rules, documentation, dependency pins, assets, and setup tools live under [`grounded/`](grounded/). Root marketplace catalogs point to that package. Repository contribution and release practices are in [CONTRIBUTING.md](CONTRIBUTING.md).
+Grounded's skills, rules, documentation, dependency sources, assets, and setup tools live under [`grounded/`](grounded/). Root marketplace catalogs point to that package. See the [changelog](CHANGELOG.md) for release history and [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and release practices.
 
 ## License
 

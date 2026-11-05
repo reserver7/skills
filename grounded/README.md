@@ -1,10 +1,12 @@
 # Grounded
 
+[![Latest release](https://img.shields.io/github/v/release/reserver7/skills?filter=skills-v%2A&sort=semver)](https://github.com/reserver7/skills/releases/latest)
+
 A collection of development skills and setup tools for **Codex and Claude Code**.
 
 Use **OpenSpec** for Spec-Driven Development (SDD) when the work needs it, **Superpowers** for implementation techniques, and **Ponytail** for small, complete changes. Add CEO-style plan review, engineering review, ADR authoring, or Jev evaluation only when needed.
 
-This repository recreates that environment on another computer through pinned dependencies, shared rules, and standalone skills. Grounded is distributed through its own plugin marketplace: the host downloads it after a one-time source registration, with no manual Git clone. Codex CLI registration and installation have been verified; the public OpenAI directory submission is blocked by its current skills-only eligibility check. The full managed setup installs pinned dependencies and shared rules. There is no unified router or mandatory end-to-end pipeline.
+This repository recreates that environment on another computer through latest-stable dependencies, shared rules, and standalone skills. Codex installs Grounded from its custom marketplace. Claude Code currently loads Grounded from a local clone with `--plugin-dir`; Claude marketplace distribution is planned for later. Setup resolves official releases and shared rules. There is no unified router or mandatory end-to-end pipeline.
 
 ## Skills and tools
 
@@ -22,9 +24,9 @@ This repository recreates that environment on another computer through pinned de
 
 ## Quick start
 
-### Install from the Grounded marketplace
+### Install and load Grounded
 
-The marketplace installs Grounded's `adr`, `plan-review-ceo`, `plan-review-eng`, and `setup` skills. Run setup once per host to install the pinned OpenSpec package and selected Superpowers/Ponytail skills, connect shared rules, and archive known overlaps.
+The plugin provides Grounded's `adr`, `plan-review-ceo`, `plan-review-eng`, and `setup` skills. Run setup once per host to install the latest stable OpenSpec package and selected Superpowers/Ponytail skills, connect shared rules, and archive known overlaps.
 
 **Codex:** Add the marketplace source once per computer, then install the plugin:
 
@@ -33,28 +35,29 @@ codex plugin marketplace add reserver7/skills --ref main
 codex plugin add grounded@grounded
 ```
 
-The host downloads the repository into its managed marketplace cache and installs the plugin from `grounded/`; users do not clone or maintain a source checkout. Restart Codex or start a new session, then use `/plugins` to manage the installed plugin.
+The host downloads the repository into its managed marketplace cache and installs the plugin from `grounded/`; users do not clone or maintain a source checkout. Start a new Codex conversation, then use `/plugins` to manage the installed plugin.
 
-After installation, run `$grounded:setup` (also exposed as plugin onboarding). Setup requires macOS/Linux, Python 3.11+, Git, Node.js 20.19+, and npm. It backs up current host settings and conflicting global skill folders, removes overlapping `superpowers`/`ponytail` Codex plugins, installs Grounded's pinned implementation skills without duplicating Grounded's review skills, and connects shared rules. Then start a new conversation. Invoke `$grounded:adr`, `$grounded:plan-review-ceo`, or `$grounded:plan-review-eng` when needed.
+After installation, run `$grounded:setup` (also exposed as plugin onboarding). Setup requires macOS/Linux, Python 3.11+, Git, Node.js 20.19+, and npm. It backs up current host settings and conflicting global skill folders, removes overlapping `superpowers`/`ponytail` Codex plugins, installs resolved implementation skills without duplicating Grounded's review skills, and connects shared rules. Then start a new conversation. Invoke `$grounded:adr`, `$grounded:plan-review-ceo`, or `$grounded:plan-review-eng` when needed.
 
-**Claude Code:** The repository also carries a Claude marketplace catalog. The following is the documented setup; installation in Claude has not yet been verified:
+**Claude Code (local clone):** Clone the repository, then load the plugin directory from the project where you want to work. Claude marketplace installation is planned but is not currently supported as the setup path.
 
-```text
-/plugin marketplace add reserver7/skills
-/plugin install grounded@grounded
+```sh
+git clone https://github.com/reserver7/skills.git ~/grounded-skills
+cd /path/to/your/project
+claude --plugin-dir ~/grounded-skills/grounded
 ```
 
-After installation, run `/grounded:setup`. It installs the same pinned implementation skills for Claude, disables conflicting user-scope plugins after backing up settings, and connects shared rules. Then start a new conversation. Invoke `/grounded:adr`, `/grounded:plan-review-ceo`, or `/grounded:plan-review-eng` when needed.
+After loading the plugin, run `/grounded:setup`. It installs the same resolved implementation skills for Claude, disables conflicting user-scope plugins after backing up settings, and connects shared rules. Then start a new conversation. Invoke `/grounded:adr`, `/grounded:plan-review-ceo`, or `/grounded:plan-review-eng` when needed.
 
-Custom marketplaces are separate from the providers' public directories and do not require a public-directory listing. Users register the source once per host and computer. Grounded is not currently published in either public directory. See the [Claude marketplace guide](https://code.claude.com/docs/en/plugin-marketplaces) and [Codex plugin packaging guide](https://developers.openai.com/plugins/build/plugins).
+For Claude updates, run `git -C ~/grounded-skills pull --ff-only`, start a new Claude session with the same `--plugin-dir` option, and rerun `/grounded:setup` to refresh the persisted policy and resolve the latest stable dependencies. The repository retains a Claude marketplace catalog for the planned marketplace distribution; users should use the clone path above for now.
 
-For Codex updates, run `codex plugin marketplace upgrade grounded`, then `codex plugin add grounded@grounded`, restart the host, and rerun `$grounded:setup`. The configured source tracks `main`; release tags and ZIP assets remain available for versioned distribution.
+For Codex, configured Git marketplaces refresh at startup. Grounded tracks `main`, so merged changes become available on a subsequent Codex startup. To fetch immediately, run `codex plugin marketplace upgrade grounded`. After each plugin update, rerun `$grounded:setup` to refresh the persisted policy, dependencies, and `grounded-version` marker. `codex plugin add grounded@grounded` is for initial installation only. Release tags and ZIP assets remain available for versioned distribution.
 
-The marketplace setup is the recommended path. It uses the native plugin for Grounded's own skills and installs only the pinned shared dependencies as user skills. The optional standalone installer below is for maintainers who do not use the marketplace plugin; do not use both paths on the same host. Each downloaded skill includes its license notice and Codex metadata.
+The marketplace setup is the recommended path. It uses the native plugin for Grounded's own skills and installs only shared dependencies as user skills. The optional standalone installer below is for maintainers who do not use the marketplace plugin; do not use both paths on the same host. Each downloaded skill includes its license notice and Codex metadata.
 
 ### Optional maintainer environment setup
 
-This path installs the pinned dependencies and shared rules as well as the local skills. It requires **macOS or Linux**, **Python 3.11+**, **Git**, **Node.js 20.19+**, and **npm**. Install and authenticate Codex and/or Claude Code separately first.
+This path installs the latest stable dependencies and shared rules as well as the local skills. It requires **macOS or Linux**, **Python 3.11+**, **Git**, **Node.js 20.19+**, and **npm**. Install and authenticate Codex and/or Claude Code separately first.
 
 ```sh
 # 1. Clone the environment repository
@@ -107,11 +110,11 @@ Calling one review does not run the other reviews, create an ADR, start implemen
 
 ## Skills
 
-### `setup` — global Grounded environment after marketplace installation
+### `setup` — global Grounded environment after plugin installation
 
-Run `$grounded:setup` or `/grounded:setup` once for the current host. It runs the bundled manager from the downloaded plugin, with no manual Git clone. It installs the manifest-pinned OpenSpec package and selected Superpowers/Ponytail skills, adds or refreshes one managed policy block in `~/.codex/AGENTS.md` or `~/.claude/CLAUDE.md`, and preserves personal instructions. Before switching to Grounded-managed dependencies, it backs up and archives known overlapping global skill folders and disables conflicting plugins. Unrelated personal skills and project-level files are left alone.
+Run `$grounded:setup` or `/grounded:setup` once for the current host. It runs the bundled manager from the downloaded plugin, with no manual Git clone. It resolves the latest stable OpenSpec package and selected Superpowers/Ponytail skills from official releases, adds or refreshes one managed policy block in `~/.codex/AGENTS.md` or `~/.claude/CLAUDE.md`, and preserves personal instructions. Before switching to Grounded-managed dependencies, it backs up and archives known overlapping global skill folders and disables conflicting plugins. Unrelated personal skills and project-level files are left alone.
 
-Setup requires Python 3.11+, Git, Node.js 20.19+, and npm. It stores migration backups under `~/.local/share/grounded/migration-backups/` and installer state under `~/.local/share/skills-environment/`. Start a new conversation after setup. Rerun setup after plugin updates; the policy is a persisted snapshot, marked with `grounded-version`. Disabling or uninstalling the plugin does not remove it. To remove it, remove only the block between `<!-- skills-environment:begin -->` and `<!-- skills-environment:end -->` in the configured host instruction file.
+Setup requires Python 3.11+, Git, Node.js 20.19+, and npm. It stores owner-only retained backups and receipts under `~/.local/share/skills-environment/` and migration backups under `~/.local/share/grounded/migration-backups/`. Start a new conversation after setup. Rerun setup after plugin updates; the policy is a persisted snapshot, marked with `grounded-version`. Preview and restore the prior successful setup with `python3 <plugin-root>/setup/manage.py restore --host <codex|claude> --dry-run`, then omit `--dry-run` to apply. Remove unchanged managed skills and policy with the matching `uninstall` command. Grounded dependency versions come from local receipts and caches; restoring removed host marketplace plugins may use the host CLI and configured marketplace. Both commands retain backups and preserve edited files or policy blocks. Disabling or uninstalling the plugin does not remove shared setup; use the manager's `uninstall` command.
 
 Each review skill also reads the bundled shared policy when it is not already in host context. Standalone managed installs use the host instructions. Detailed docs remain references loaded only when relevant, not an automatic context payload.
 
@@ -200,7 +203,7 @@ See [workflow](docs/workflow.md) and [review procedure mapping](docs/review-proc
 
 ### Dependencies and installation
 
-[manifest.json](manifest.json) pins the OpenSpec npm version, external Git commits, selected skills, and known conflicting installations. External skill trees are fetched during setup rather than vendored here.
+[manifest.json](manifest.json) declares the official OpenSpec npm package, external Git repositories, selected skills, and known conflicting installations. Setup resolves the latest stable release, verifies package integrity or full commit SHA, and records the resulting receipt locally. External skill trees are fetched during setup rather than vendored here.
 
 [setup/manage.py](setup/manage.py) installs the selected content, generates host-specific invocation metadata, applies shared rules, and records installed file hashes.
 
@@ -212,7 +215,7 @@ See [workflow](docs/workflow.md) and [review procedure mapping](docs/review-proc
 | Claude rules | Managed block in `~/.claude/CLAUDE.md` |
 | Sources, private OpenSpec installation, backups, and registry | `~/.local/share/skills-environment/` |
 
-The three local skills are explicit-only. Their common bodies are shared between hosts; detailed resources load at the relevant phase. No runtime GitHub lookup is required.
+The three local skills are explicit-only. Their common bodies are shared between hosts; detailed resources load at the relevant phase. Setup requires access to GitHub release metadata and the npm registry; restore and uninstall use local state only.
 
 ## Validation
 
@@ -224,11 +227,20 @@ python3 setup/manage.py check
 python3 setup/manage.py doctor --project /path/to/project
 ```
 
-Doctor checks known names, conventional skill locations, enabled overlapping plugins, managed file hashes, policy blocks, and the pinned OpenSpec package version. It cannot prove arbitrary project prose, renamed tools, or nonstandard paths conflict-free.
+Doctor checks known names, conventional skill locations, enabled overlapping plugins, managed file hashes, policy blocks, and the receipt's OpenSpec version, integrity, and lockfile hash. It cannot prove arbitrary project prose, renamed tools, or nonstandard paths conflict-free.
 
 Static checks do not establish fresh-machine compatibility, agent compliance, equivalent defect detection, or token savings. Those remain subjects of the [runtime validation plan](docs/validation.md).
 
 ## Local install and updates
+
+`setup` resolves upstream versions on each run. The selected versions and integrity identifiers are stored in the local receipt; source checkouts are cached by commit and OpenSpec by version. Restore does not resolve new Grounded dependency versions. If the transaction also restores a removed host marketplace plugin, the host CLI may contact its configured marketplace. Preview then apply:
+
+```sh
+python3 setup/manage.py restore --host codex --dry-run
+python3 setup/manage.py restore --host codex
+```
+
+Use `--host claude` for Claude. To remove unchanged managed skills and policy, use `uninstall` with the same `--dry-run` preview. Both commands preserve edited files, retain owner-only backups, and report paths that need manual attention. Backups are not pruned automatically; inspect the printed path and remove it manually when no longer needed.
 
 For a single host or a separate installation home:
 
@@ -249,21 +261,21 @@ python3 setup/manage.py install
 python3 setup/manage.py doctor --project /path/to/project
 ```
 
-The marketplace `setup` command archives exact-name overlapping global skills and disables/removes conflicting plugins before installing the pinned set. It leaves unrelated personal skills and project-level files alone. The separate standalone `install` command still stops on unmanaged overlaps or edited destinations. Obsolete, unmodified skills previously installed by the standalone installer are backed up and removed during updates.
+The marketplace `setup` command resolves official latest stable releases, archives exact-name overlapping global skills, and disables/removes conflicting plugins before installing. It leaves unrelated personal skills and project-level files alone. The separate standalone `install` command still stops on unmanaged overlaps or edited destinations. Obsolete, unmodified skills previously installed by the standalone installer are backed up and removed during updates.
 
-Backups preserve previous instruction files, archived global skills, and Codex plugin caches/marketplace sources. If installation fails, setup restores archived skills and attempts to restore disabled plugins; downloaded sources and npm state may remain. Setup does not edit shell startup files or install host applications.
+Backups preserve previous instruction files, archived global skills, and Codex plugin caches/marketplace sources. Backup directories are mode `0700`, backup files are mode `0600`, and setup never prunes them. If installation fails, setup restores archived skills and attempts to restore disabled plugins; downloaded source and npm caches may remain. Setup does not edit shell startup files or install host applications.
 
 Use `python3 /path/to/skills/grounded/setup/manage.py openspec --project /path/to/project -- <arguments>` to invoke the managed OpenSpec version. A plain `openspec` command may select another version on PATH.
 
 ## Versioning
 
-The canonical plugin version is in [plugin.json](plugin.json). Run `python3 grounded/setup/release.py bump <MAJOR.MINOR.PATCH>` from the repository root before a release PR; it updates both Codex and Claude manifests. Tag the merged commit as `skills-v<version>`. Release CI checks tag/version equality and main-branch ancestry, runs the setup tests, and attaches a matching `grounded-<version>.zip` to the GitHub Release. A mismatch blocks the release.
+The canonical plugin version is in [plugin.json](plugin.json). Run `python3 grounded/setup/release.py bump <MAJOR.MINOR.PATCH>` from the repository root before a release PR; it updates both Codex and Claude manifests. GitHub Release notes are generated from merged PR titles and categories using `.github/release.yml`; apply a release-category label manually because PR title prefixes do not assign labels. They list routine changes and link to the repository [changelog](../CHANGELOG.md), which is reserved for significant decisions, compatibility or migration guidance, and measured evidence. Do not repeat ordinary PR summaries in both. Use the PR template to provide context for review and indicate whether a curated changelog entry is warranted. The README badge reads from the latest published `skills-v*` release, so it does not need a version edit. Tag the merged commit as `skills-v<version>`. Release CI checks tag/version equality and main-branch ancestry, runs setup checks, and attaches a matching `grounded-<version>.zip` to the GitHub Release. A mismatch blocks the release.
 
-The same version is recorded in the shared-rule block by setup. Updating the plugin does not silently rewrite user instructions: rerun the plugin's setup skill to refresh the version and rules. GitHub releases and provider marketplace publication are separate; submit the tagged source/package through each provider's update process.
+The same version is recorded in the shared-rule block by setup. Updating the plugin does not silently rewrite user instructions: rerun the plugin's setup skill to refresh the version and rules. The Codex custom marketplace tracks `main`; release tags create versioned ZIP assets but do not push updates to running hosts. Claude marketplace distribution is planned; current Claude installs update from the local clone.
 
-Git revisions identify this environment's rules, installer, and local skills. [manifest.json](manifest.json) is the source of truth for external dependency pins; updates do not follow upstream latest automatically.
+Git revisions identify this environment's rules, installer, and local skills. [manifest.json](manifest.json) declares official upstream repositories and the npm registry. Each setup resolves their latest stable releases and records versions plus immutable identifiers locally. Use `restore` to return to the previous recorded Grounded setup without querying upstream for Grounded dependencies.
 
-The release workflow uses `skills-v*` tags. OpenSpec's top-level npm version is pinned, but its complete transitive dependency closure is not locked in this repository.
+The release workflow uses `skills-v*` tags. OpenSpec is installed from npm's `latest` dist-tag after validating the stable version and package integrity. Its version-specific lockfile is retained in the local cache; machine-specific receipts and caches are not committed.
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for branch, pull request, commit, and release practices.
 
@@ -278,4 +290,4 @@ MIT — see [LICENSE](../LICENSE). Each local skill carries its own notice so di
 - [Ponytail](https://github.com/DietrichGebert/ponytail) — reuse and minimal complete changes.
 - Michael Nygard's Architecture Decision Record structure — Context, Decision, and Consequences.
 
-Source pins and deliberate compatibility changes are documented in [SOURCES.md](SOURCES.md).
+Source resolution policy and deliberate compatibility changes are documented in [SOURCES.md](SOURCES.md).

@@ -16,13 +16,27 @@ class ReleaseTests(unittest.TestCase):
         (self.root / ".claude-plugin").mkdir()
         self.paths = [self.root / "plugin.json", self.root / ".claude-plugin/plugin.json"]
         for path in self.paths:
-            path.write_text(json.dumps({"name": "grounded", "version": "0.1.0", "description": "Keep this"}))
+            data = {"name": "grounded", "version": "0.1.0", "description": "Keep this"}
+            if path.name == "plugin.json" and path.parent == self.root:
+                data["extensions"] = {"com.openai": {"publication": {
+                    "release_notes": "Grounded 0.1.0: Initial release."
+                }}}
+            path.write_text(json.dumps(data))
         self.output = self.root.parent / "grounded.zip"
 
     def test_bump_updates_both_hosts_without_losing_metadata(self):
         release.bump(self.root, "0.2.0")
         for path in self.paths:
-            self.assertEqual(json.loads(path.read_text()), {"name": "grounded", "version": "0.2.0", "description": "Keep this"})
+            data = json.loads(path.read_text())
+            self.assertEqual(
+                {key: data[key] for key in ["name", "version", "description"]},
+                {"name": "grounded", "version": "0.2.0", "description": "Keep this"},
+            )
+            if path.parent == self.root:
+                self.assertEqual(
+                    data["extensions"]["com.openai"]["publication"]["release_notes"],
+                    "Grounded 0.1.0: Initial release.",
+                )
 
     def test_invalid_versions_do_not_change_files(self):
         before = [path.read_bytes() for path in self.paths]
@@ -61,6 +75,14 @@ class ReleaseTests(unittest.TestCase):
     def test_output_inside_plugin_is_rejected(self):
         with self.assertRaises(ValueError):
             release.package(self.root, "skills-v0.1.0", self.root / "release.zip")
+
+    def test_stale_release_notes_prevent_packaging(self):
+        data = json.loads(self.paths[0].read_text())
+        data["extensions"]["com.openai"]["publication"]["release_notes"] = "Grounded 0.0.9: Old release."
+        self.paths[0].write_text(json.dumps(data))
+        with self.assertRaisesRegex(ValueError, "release notes must start with 'Grounded 0.1.0:'"):
+            release.package(self.root, "skills-v0.1.0", self.output)
+        self.assertFalse(self.output.exists())
 
 
 if __name__ == "__main__":

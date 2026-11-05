@@ -15,7 +15,7 @@ Run all eleven sections, not a checklist. Use the user's language and LICENSE.re
 - Input: named OpenSpec proposal/specs/design/tasks and applicable prior decisions. Without SDD, use the agreed request/chat plan; do not force OpenSpec solely to review.
 - OpenSpec owns requirements/design/tasks. A review note records findings and approvals, not another PRD or implementation plan. Use these documents as pitch/handoff inputs.
 - Superpowers/Ponytail implement and review code later. Here, inspect code for evidence but do not implement, run a second code review, start worktrees/agents, call Jev or invoke another stage automatically.
-- Use the host's actual read/search/question tools. If a question tool is unavailable, ask in chat and wait. Do not fabricate answers or confirmations. Respect explicit delegation already given by the user.
+- Use host tools/schemas. Follow [question contract](../../rules/development.md#interactive-questions): if unavailable or rejected, ask once in chat and wait. Never invent answers/consent; honor user delegation.
 
 ## Phase 0 — Pre-review audit
 

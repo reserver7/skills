@@ -26,7 +26,7 @@ Accept relevant design notes, code, discussion, prior review and alternatives. S
 
 ## Stage 3 — Interview
 
-Follow all six branches in [the authoring procedure](references/authoring.md): context, decision, balanced consequences, alternatives, rollout/validation, references. Ask one question at a time, with a recommended answer and its evidence/assumptions. Obtain answers for consequential gaps; do not fabricate user consent, measurements or rejected options. Record [TBD] for unresolved facts and return to them before generation.
+Follow all six branches in [the authoring procedure](references/authoring.md): context, decision, balanced consequences, alternatives, rollout/validation, references. Ask one question at a time under the shared [interactive question contract](../../rules/development.md#interactive-questions), with a recommended answer and its evidence/assumptions. Obtain answers for consequential gaps; do not fabricate user consent, measurements or rejected options. Record [TBD] for unresolved facts and return to them before generation.
 
 One ADR captures one declarative decision. Keep feature requirements and implementation tasks in OpenSpec or the existing plan. Do not generate another PRD/task list.
 
