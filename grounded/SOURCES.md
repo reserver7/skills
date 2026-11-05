@@ -2,17 +2,17 @@
 
 ## External tools
 
-| Source | Pinned version / commit | Installed content |
+| Source | Resolution at setup | Installed content |
 |---|---|---|
-| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | npm 1.12.0 | Official CLI under the managed private npm prefix; per-project skills generated only on explicit init |
-| [Superpowers](https://github.com/obra/superpowers) | 7.0.0 / bb92a77741419a4ab5f06e711a283343f1ada0c3 | systematic-debugging, test-driven-development, verification-before-completion, requesting-code-review, receiving-code-review |
-| [Ponytail](https://github.com/DietrichGebert/ponytail) | 5.2.0 / 2961b52fc1fe6a5a87c7a959a79512e5c2f3ffe5 | ponytail skill only, no hooks |
+| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | npm `latest` stable dist-tag from `registry.npmjs.org`, verified by package integrity | Official CLI under a versioned private npm prefix; per-project skills generated only on explicit init |
+| [Superpowers](https://github.com/obra/superpowers) | Latest stable GitHub Release; tag resolved to and fetched by full commit SHA | systematic-debugging, test-driven-development, verification-before-completion, requesting-code-review, receiving-code-review |
+| [Ponytail](https://github.com/DietrichGebert/ponytail) | Latest stable GitHub Release; tag resolved to and fetched by full commit SHA | ponytail skill only, no hooks |
 | Local review and ADR skills | `skills/plan-review-ceo/`, `skills/plan-review-eng/`, `skills/adr/` | Standalone procedures extracted and adapted from the previous local implementation; no external review plugin installation or download |
 | [Jev](https://typesafe.ai/) | Optional service, not bundled/pinned | Connection instructions only; configure current official provider separately |
 
-External skill folders and their upstream root LICENSE files are copied from pinned Git checkouts during setup.
+External skill folders and their upstream root LICENSE files are copied from verified release Git checkouts during setup. The resolved versions and immutable identifiers are recorded locally so restore does not resolve newer releases.
 External trees are not vendored into this Git repository's new install path.
-OpenSpec pins the top-level npm package; its transitive dependency closure is not fully locked by this repository.
+OpenSpec's installed lockfile is retained in its version cache; caches and backups are local to the machine and are not committed.
 
 ## Deliberate adaptations
 

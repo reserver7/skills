@@ -28,6 +28,13 @@ def bump(root, version):
         path.write_text(json.dumps(data, indent=2) + "\n")
 
 
+def validate_release_notes(plugin):
+    version = plugin.get("version", "")
+    notes = plugin.get("extensions", {}).get("com.openai", {}).get("publication", {}).get("release_notes", "")
+    if not isinstance(notes, str) or not notes.startswith(f"Grounded {version}: "):
+        raise ValueError(f"Codex release notes must start with 'Grounded {version}:'")
+
+
 def package(root, tag, output):
     entries = manifests(root)
     version = entries[0][1].get("version", "")
@@ -35,6 +42,7 @@ def package(root, tag, output):
         raise ValueError("Canonical plugin version must be MAJOR.MINOR.PATCH")
     if any(data.get("version") != version for _, data in entries):
         raise ValueError("Codex and Claude plugin versions differ; run release.py bump")
+    validate_release_notes(entries[0][1])
     if tag != f"skills-v{version}":
         raise ValueError(f"Tag {tag!r} does not match plugin version; expected skills-v{version}")
     if output.resolve().is_relative_to(root.resolve()):

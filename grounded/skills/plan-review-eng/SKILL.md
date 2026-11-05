@@ -30,7 +30,7 @@ Read [the full section procedures](references/sections.md). Walk all four; small
 3. **Tests:** read [the coverage diagram procedure](templates/test-coverage-diagram.md). Map every new path, branch, input, error/rescue and integration to existing/planned/missing tests. Include missing test names and one-sentence specs. Ask the riskiest-path 2am-Friday, hostile-QA and chaos-test questions. Review pyramid balance, flakiness and load/stress needs. Record explicit implement/defer decisions per missing row.
 4. **Performance:** algorithmic cost, I/O/network/query behavior, concurrency, memory/cache and expected load. Supply budget deltas with measured/estimated/unknown basis. Never invent results.
 
-For a consequential finding, show file/requirement evidence, reachable failure, options, recommendation and trade-offs. Ask one issue at a time with the host's question tool or chat; stop for the answer. At each section end record "No issues found", or accepted/deferred findings, and wait for transition unless pacing was explicitly delegated. Do not invent issues solely to fill sections. Reuse CEO evidence by link; examine engineering detail and new risks, not the same review twice.
+For consequential findings, show evidence, failure, options, recommendation and trade-offs. Follow the [question contract](../../rules/development.md#interactive-questions): ask one issue at a time; if the host tool is unavailable or rejected, ask once in chat and wait. Record each section as "No issues found" or accepted/deferred findings, then wait for transition unless pacing was delegated. Do not invent issues. Link CEO evidence; review new engineering risks only.
 
 ## Phase 2 — Worktree parallelization analysis
 

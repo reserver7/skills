@@ -4,21 +4,27 @@ Follow explicit user instructions and the current project's constraints. Choose 
 
 ## One owner per job
 
-- Clear, local fixes: inspect, change, verify. No SDD paperwork.
+- Clear local bug: use systematic-debugging, reproduce it, add/run a focused regression, make the smallest fix, verify. No SDD without material requirements/design uncertainty.
+- Typo/style fix: edit and verify only; skip SDD, broad tests, reviews and Jev.
 - Clear work spanning several parts: state scope and acceptance checks in chat, then implement. No separate plan file.
 - New behavior with material uncertainty, cross-system contracts, authorization, or persistent-data changes: use OpenSpec when requirements/design need agreement. File count is not the criterion. An OpenSpec directory alone never requires SDD.
 - Reuse an active change if the request belongs to it. Keep existing specs accurate when behavior changes. Escalate the workflow if investigation reveals material uncertainty; explain why.
-- If a request leaves a decision-critical behavior unspecified and plausible choices would produce different user-visible results, data changes, or API contracts, pause before implementation and ask only the questions needed to choose. Do not silently pick a default. Use OpenSpec if those requirements/design decisions need a durable agreement. Jev may help compare concrete options only when requested or explicitly enabled; it does not replace clarification or approval.
-- For SDD, OpenSpec owns requirements, design, tasks, validation and archive. Its `tasks.md` is the only work plan. Use the installed OpenSpec workflow and its actual instructions; do not create a second PRD, design or Superpowers plan.
+- If plausible interpretations change user-visible behavior, data or APIs, ask one blocker and wait; never assume a default. Sandbox/tool limits do not decide it. Use OpenSpec for durable agreement. Jev compares options only when requested/enabled; it cannot replace the user's decision.
+- For unresolved requirements/design/contracts in review or implementation, name OpenSpec and the active change (or say a new one is needed), ask only blockers, and stop. Do not approve/implement through the gap or create a parallel plan. Resume from agreed artifacts.
+- OpenSpec owns SDD requirements, design, tasks, validation and archive; `tasks.md` is the only plan. Follow its installed workflow; don't duplicate PRD/design/planning docs.
 
 ## Implementation
 
 - Apply Ponytail to coding: reuse existing code, make the smallest complete change, preserve validation/error handling, avoid speculative abstractions. Load `ponytail` once when useful; never also activate its lifecycle hook/plugin or duplicate its full prompt here.
-- For bugs/unexpected behavior, use `systematic-debugging`; for nontrivial behavior changes use `test-driven-development` when tests are authorized. Honor user/project test constraints; do not claim unrun checks passed. Trivial prose/style changes do not need TDD.
-- For refactors and changes to existing interfaces or data behavior, identify the existing observable contracts first (including caller assumptions and returned-object behavior), then preserve them or record an explicitly approved change. Treat permission to author tests separately from permission to run them. When test authoring is allowed, write characterization/regression tests for decision-critical contracts before implementation; for other nontrivial behavior changes, write the failing test first. Run tests only when execution is allowed. If authoring is prohibited, or execution is prohibited/deferred, record the constraint, what remains unverified and the resulting risk.
+- For bugs use `systematic-debugging`; use `test-driven-development` for nontrivial changes when authorized. For side-effect/dedup changes, test retries and preserve behavior; ask when the contract trades lost retryable work against duplicate effects. For expiring idempotency state, check reclamation and atomic concurrent check-and-record. Honor test limits, report unrun checks and never claim they pass; prose edits need no TDD.
+- For interface/data refactors, map caller assumptions and observable behavior first; preserve it or get approval to change. Test authorship and execution are separate permissions. When allowed, write characterization/regression tests for decision-critical contracts and failing tests first for other nontrivial changes. If testing is prohibited/deferred, state the constraint, unverified checks and risk.
 - Use `verification-before-completion` before asserting success. Report actual evidence and checks not run. Use `receiving-code-review` when acting on review feedback.
-- Implement from the current request/chat plan or OpenSpec task. Do not invoke Superpowers brainstorming, writing-plans, executing-plans or subagent-driven-development. Worktree isolation is needed only when the workspace/task requires it, not for every edit.
-- `requesting-code-review` is the sole default code-review procedure, for substantial/risky changes or when requested. Review a trivial edit directly. Do not add a second generic Ponytail or pre-implementation review. Re-review only changed findings or affected behavior.
+- Implement from chat or the OpenSpec task. Do not use Superpowers planning/brainstorming/execution or subagent-development. Use worktrees only when the task needs isolation.
+- Use `requesting-code-review` for substantial/risky work or when asked; skip trivial edits. Don't duplicate Ponytail or pre-implementation review; re-review only changed findings or behavior.
+
+## Interactive questions
+
+- Ask one decision at a time using the active host's schema. If unavailable or rejected, ask once in chat and wait; never repeat it or infer consent.
 
 ## Optional reviews and decisions
 

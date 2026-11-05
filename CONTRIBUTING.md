@@ -3,9 +3,10 @@
 ## Branches
 
 - `main` is the only long-lived branch and must stay releasable. Do not force-push or delete it.
-- A trivial typo or similarly small documentation correction may go directly to `main`.
-- Changes to skills, shared rules, setup, the manifest, or release automation use a short-lived branch and pull request. Start from the latest `main` and use `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`, or `ci/<slug>` as appropriate.
+- All changes to `main` go through a pull request so the required `validate` check can pass. Start from the latest `main` and use `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`, or `ci/<slug>` as appropriate.
 - After merging, delete the working branch. Do not keep `develop`, `release`, or feature branches long-term.
+
+The `main` ruleset requires the GitHub Actions check named `validate`, blocks force-pushes and deletion, and does not allow bypasses.
 
 Example:
 
@@ -18,16 +19,16 @@ git push -u origin feat/skill-install-check
 # open a pull request to main
 ```
 
-Use Conventional Commits for commit messages; see [`grounded/rules/development.md`](grounded/rules/development.md).
+Use Conventional Commits for commit messages; see [`grounded/rules/development.md`](grounded/rules/development.md). PR titles and manually applied release-category labels feed the automatically generated GitHub Release notes, which list routine changes. Title prefixes do not assign labels. Update [`CHANGELOG.md`](CHANGELOG.md) only when the release needs durable rationale for a significant decision, compatibility or migration guidance, or measured evidence. Do not copy routine PR summaries into both places. The PR template asks for this context and uses `None` when no curated entry is needed.
 
 ## Releases
 
 - Create a release tag only from an up-to-date commit on `main`.
 - Tags use `skills-v<MAJOR>.<MINOR>.<PATCH>`, for example `skills-v0.1.1`.
-- `grounded/plugin.json` is the canonical plugin version. Run `python3 grounded/setup/release.py bump <version>` on a release-preparation branch to synchronize it with `grounded/.claude-plugin/plugin.json`, then merge the change through a pull request. Use PATCH for compatible fixes, MINOR for new capabilities, and MAJOR for incompatible changes; before 1.0, use MINOR for incompatible changes.
+- `grounded/plugin.json` is the canonical plugin version. Run `python3 grounded/setup/release.py bump <version>` on a release-preparation branch to synchronize it with `grounded/.claude-plugin/plugin.json`, and update `extensions.com.openai.publication.release_notes` to start with `Grounded <version>:`. Pull request CI checks the versioned release notes. Use the PR template for reviewer context and follow Conventional Commit title syntax; maintainers apply the release-category label manually. GitHub automatically generates release notes from merged PR titles and categories using `.github/release.yml`; those notes cover routine changes and link to [`CHANGELOG.md`](CHANGELOG.md) only for significant rationale, compatibility or migration guidance, and measured evidence. Update the changelog selectively; do not duplicate ordinary PR summaries. README release badges follow the latest published `skills-v*` tag automatically. Use PATCH for compatible fixes, MINOR for new capabilities, and MAJOR for incompatible changes; before 1.0, use MINOR for incompatible changes.
 - Tag the merged version commit. CI requires that the tagged commit belongs to `main` and that both manifests exactly match the tag. A mismatched version stops the release; CI does not rewrite the tagged commit.
 - Pushing a valid `skills-v*` tag publishes a GitHub Release with `grounded-<version>.zip`. Never move or reuse a published tag.
-- GitHub releases do not submit or publish provider marketplace updates. Use the same tagged version/source and ZIP for each provider's update process. After users update the plugin, rerun Grounded setup to refresh its persisted shared rules.
+- Codex's custom marketplace tracks `main` and refreshes from the Git source when Codex starts; a release tag does not push to running clients. Claude Code currently loads the cloned `grounded/` directory with `claude --plugin-dir`; Claude marketplace distribution is planned separately. After updating either host's plugin source, rerun Grounded setup to refresh the persisted shared rules, resolve current stable dependencies, and update the version marker.
 
 ```sh
 # On a release-preparation branch; commit and merge this change through a PR
