@@ -7,19 +7,97 @@
   "sources": {
     "superpowers": {
       "url": "https://github.com/obra/superpowers.git",
+      "license": "MIT",
+      "license_file": "LICENSE",
       "skills": [
         "systematic-debugging",
         "test-driven-development",
         "verification-before-completion",
         "requesting-code-review",
-        "receiving-code-review"
+        "receiving-code-review",
+        "brainstorming",
+        "diagnosing-superpowers",
+        "dispatching-parallel-agents",
+        "executing-plans",
+        "finishing-a-development-branch",
+        "subagent-driven-development",
+        "using-git-worktrees",
+        "using-superpowers",
+        "writing-plans",
+        "writing-skills"
       ]
     },
     "ponytail": {
       "url": "https://github.com/DietrichGebert/ponytail.git",
+      "license": "MIT",
+      "license_file": "LICENSE",
       "skills": [
         "ponytail"
       ]
+    },
+    "supabase": {
+      "url": "https://github.com/supabase/agent-skills.git",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "skills": [
+        "supabase",
+        "supabase-postgres-best-practices"
+      ]
+    },
+    "addy": {
+      "url": "https://github.com/addyosmani/agent-skills.git",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "skills": [
+        "api-and-interface-design",
+        "ci-cd-and-automation",
+        "observability-and-instrumentation",
+        "performance-optimization",
+        "security-and-hardening"
+      ]
+    },
+    "playwright": {
+      "url": "https://github.com/microsoft/playwright-cli.git",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "skills": ["playwright-cli"]
+    },
+    "vercel-guidelines": {
+      "url": "https://github.com/vercel-labs/web-interface-guidelines.git",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "skills": ["web-design-guidelines"]
+    },
+    "anthropic-mcp-builder": {
+      "url": "https://github.com/anthropics/skills.git",
+      "license": "Apache-2.0",
+      "license_file": "skills/mcp-builder/LICENSE.txt",
+      "skills": ["mcp-builder"]
+    },
+    "matt": {
+      "url": "https://github.com/mattpocock/skills.git",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "skills_dir": "skills/engineering",
+      "skills": ["to-tickets"]
+    },
+    "ecc": {
+      "url": "https://github.com/affaan-m/ecc.git",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "skills": [
+        "database-migrations",
+        "deployment-patterns",
+        "doc-updater",
+        "mysql-patterns"
+      ]
+    },
+    "ecc-docs-governance": {
+      "url": "https://github.com/affaan-m/ecc.git",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "skills_dir": ".agents/skills",
+      "skills": ["docs-governance"]
     }
   },
   "local_skills": [
@@ -27,13 +105,25 @@
     "plan-review-eng",
     "adr"
   ],
+  "archive_skills": [
+    "agent-browser",
+    "context7-mcp",
+    "deployment-engineer",
+    "devops-cicd",
+    "find-skills",
+    "frontend-design",
+    "javascript-typescript",
+    "orca-cli",
+    "orca-computer-use",
+    "orchestration",
+    "product-to-tickets",
+    "prompt-fix",
+    "vercel-composition-patterns",
+    "vercel-react-best-practices",
+    "ui-accessibility-review"
+  ],
   "incompatible_skills": [
     "openspec-superpowers",
-    "using-superpowers",
-    "brainstorming",
-    "writing-plans",
-    "executing-plans",
-    "subagent-driven-development",
     "ponytail-review",
     "office-hours",
     "prd",
@@ -43,6 +133,7 @@
   ],
   "incompatible_plugins": [
     "superpowers",
-    "ponytail"
+    "ponytail",
+    "supabase"
   ]
 }

@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -120,10 +121,19 @@ def private_copy(source, destination):
 
 
 def remote_json(url, accept):
-    request = Request(url, headers={
+    headers = {
         "Accept": accept,
         "User-Agent": "Grounded-setup",
-    })
+    }
+    if urlparse(url).hostname == "api.github.com":
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        if not token and shutil.which("gh"):
+            auth = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True)
+            if auth.returncode == 0:
+                token = auth.stdout.strip()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+    request = Request(url, headers=headers)
     try:
         with urlopen(request, timeout=20) as response:
             return json.loads(response.read())
@@ -153,6 +163,15 @@ def github_repo(url):
 def resolve_dependencies(manifest):
     resolved = {"resolved_at": datetime.now(timezone.utc).isoformat(), "sources": {}}
     for name, source in manifest["sources"].items():
+        if name in {"vercel-guidelines", "ecc-docs-governance", "anthropic-mcp-builder"}:
+            ref = run("git", "ls-remote", "--exit-code", source["url"], "HEAD")
+            match = re.fullmatch(r"([0-9a-f]{40})\tHEAD", ref)
+            if not match:
+                raise ValueError(f"{name} HEAD did not resolve to a full Git commit SHA")
+            resolved["sources"][name] = {
+                "url": source["url"], "version": "HEAD", "commit": match[1],
+            }
+            continue
         owner, repo = github_repo(source["url"])
         release_url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
         release = remote_json(release_url, "application/vnd.github+json")
@@ -200,7 +219,7 @@ def resolve_dependencies(manifest):
 
 
 def print_resolved(resolved):
-    print("Resolved stable dependencies:")
+    print("Resolved dependencies:")
     for name, item in resolved["sources"].items():
         print(f"  {name}: {item['version']} ({item['commit']})")
     package = resolved["openspec"]
@@ -317,7 +336,7 @@ def conflicts(home, manifest, registry, hosts):
 def native_conflicts(args, manifest, registry, backup):
     """Move known global skill duplicates aside and disable overlapping host plugins."""
     hosts = ["codex", "claude"] if args.host == "both" else [args.host]
-    names = set(manifest["local_skills"] + manifest["incompatible_skills"])
+    names = set(manifest["local_skills"] + manifest["incompatible_skills"] + manifest.get("archive_skills", []))
     dependency_names = set()
     for source in manifest["sources"].values():
         names.update(source["skills"])
@@ -467,8 +486,11 @@ def restore_native_conflicts(backup, args):
                 print(f"Preserved existing skill path {source}; archived copy remains at {saved}")
                 continue
             source.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(saved, source, symlinks=True) if saved.is_dir() else shutil.copy2(saved, source)
-            restore_modes(source, entry.get("modes", {}))
+            if saved.is_symlink():
+                source.symlink_to(os.readlink(saved), target_is_directory=saved.is_dir())
+            else:
+                shutil.copytree(saved, source, symlinks=True) if saved.is_dir() else shutil.copy2(saved, source)
+                restore_modes(source, entry.get("modes", {}))
     for plugin_id in metadata.get("disabled_claude_plugins", []):
         settings = load(args.home / ".claude/settings.json", {})
         if settings.get("enabledPlugins", {}).get(plugin_id, False):
@@ -553,11 +575,23 @@ def validate_repo(manifest):
         raise ValueError("Codex and Claude plugin versions differ; run setup/release.py bump")
     validate_release_notes(plugin)
     names = list(manifest["local_skills"])
-    for source in manifest["sources"].values():
+    for name, source in manifest["sources"].items():
         github_repo(source["url"])
+        license_file = "skills/mcp-builder/LICENSE.txt" if name == "anthropic-mcp-builder" else "LICENSE"
+        if source.get("license") not in {"MIT", "Apache-2.0"} or source.get("license_file") != license_file:
+            raise ValueError("Each external skill source must declare its supported license file")
+        if source.get("skills_dir", "skills") not in {"skills", "skills/engineering", ".agents/skills"}:
+            raise ValueError("Unsupported external skills directory")
         if not source.get("skills") or any(not re.fullmatch(r"[a-z0-9-]+", name) for name in source["skills"]):
             raise ValueError("Each source must declare safe skill names")
         names.extend(source["skills"])
+    archive_names = manifest.get("archive_skills", [])
+    if (not isinstance(archive_names, list)
+            or any(not isinstance(name, str) or not re.fullmatch(r"[a-z0-9-]+", name)
+                   for name in archive_names)
+            or len(archive_names) != len(set(archive_names))
+            or set(archive_names) & set(names)):
+        raise ValueError("Archive skill names must be unique, safe, and separate from installed skills")
     package = manifest["openspec"]
     if package.get("registry") != "https://registry.npmjs.org" or not re.fullmatch(r"@[a-z0-9-]+/[a-z0-9._-]+", package.get("package", "")):
         raise ValueError("OpenSpec must use the official npm package and registry")
@@ -596,6 +630,19 @@ def fetch_source(state, name, source, resolved):
     return dest
 
 
+def verify_source_license(upstream, name, source):
+    license_path = upstream / source["license_file"]
+    if not license_path.is_file():
+        raise ValueError(f"Confirmed {source['license']} license file is missing for {name}: {license_path}")
+    text = license_path.read_text(errors="replace")
+    declarations = {
+        "MIT": r"(?im)^\s*(?:MIT License\b|SPDX-License-Identifier:\s*MIT\s*$)",
+        "Apache-2.0": r"(?is)Apache License\s+Version 2\.0\b",
+    }
+    if not re.search(declarations[source["license"]], text):
+        raise ValueError(f"Expected {source['license']} license declaration was not found for {name}: {license_path}")
+
+
 def prepare_openspec(state, package):
     prefix = state / "npm-versions" / package["version"]
     installed_path = prefix / "node_modules" / "@fission-ai" / "openspec" / "package.json"
@@ -628,29 +675,113 @@ def prepare_openspec(state, package):
             "lock_sha256": hashlib.sha256((prefix / "package-lock.json").read_bytes()).hexdigest()}
 
 
+def prepare_playwright(state, version):
+    package = "@playwright/cli"
+    prefix = state / "playwright" / version
+    wrapper = prefix / "playwright-cli"
+    if wrapper.is_file():
+        return wrapper
+
+    metadata = remote_json(f"https://registry.npmjs.org/@playwright%2fcli/{version}", "application/json")
+    integrity = metadata.get("dist", {}).get("integrity", "")
+    if metadata.get("version") != version or not integrity.startswith("sha512-"):
+        raise ValueError(f"Could not verify npm metadata for {package}@{version}")
+    prefix.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=prefix.parent) as temp:
+        staged = Path(temp) / "package"
+        staged.mkdir()
+        subprocess.run(["npm", "install", "--prefix", str(staged), "--no-audit", "--no-fund",
+                        "--registry", "https://registry.npmjs.org", f"{package}@{version}"], check=True)
+        entry = load(staged / "package-lock.json", {}).get("packages", {}).get(f"node_modules/{package}", {})
+        if entry.get("version") != version or entry.get("integrity") != integrity:
+            raise ValueError(f"Installed {package} did not match resolved version and integrity")
+        subprocess.run([str(staged / "node_modules/.bin/playwright"), "install", "chromium"], check=True,
+                       env={**os.environ, "PLAYWRIGHT_BROWSERS_PATH": str(staged / "browsers")})
+        script = staged / wrapper.name
+        script.write_text("#!/bin/sh\n"
+                          f"export PLAYWRIGHT_BROWSERS_PATH={shlex.quote(str(prefix / 'browsers'))}\n"
+                          f"exec {shlex.quote(str(prefix / 'node_modules/.bin/playwright-cli'))} \"$@\"\n")
+        script.chmod(0o755)
+        staged.rename(prefix)
+    return wrapper
+
+
+SUPERPOWERS_OPT_IN = frozenset({
+    "brainstorming", "diagnosing-superpowers", "dispatching-parallel-agents",
+    "executing-plans", "finishing-a-development-branch", "subagent-driven-development",
+    "using-git-worktrees", "using-superpowers", "writing-plans", "writing-skills",
+})
+
+
 def prepare(state, manifest, stage, resolved):
     for name in manifest["local_skills"]:
         shutil.copytree(ROOT / "skills" / name, stage / name)
     for name, source in manifest["sources"].items():
         upstream = fetch_source(state, name, source, resolved["sources"][name])
+        verify_source_license(upstream, name, source)
         for skill in source["skills"]:
             target = stage / skill
-            shutil.copytree(upstream / "skills" / skill, target)
+            if name == "anthropic-mcp-builder":
+                shutil.copytree(upstream / "skills" / skill, target)
+                continue
+            if name == "vercel-guidelines":
+                references = target / "references"
+                references.mkdir(parents=True)
+                shutil.copy2(upstream / "command.md", references / "command.md")
+                shutil.copy2(upstream / source["license_file"], target / "LICENSE")
+                adapter = (ROOT / "setup/adapters/web-design-guidelines.md").read_text()
+                commit = resolved["sources"][name]["commit"]
+                (target / "SKILL.md").write_text(adapter + f"\nInstalled Vercel rules revision: `{commit}`.\n")
+                continue
+            if skill == "doc-updater":
+                target.mkdir()
+                shutil.copy2(upstream / "agents/doc-updater.md", target / "SKILL.md")
+            else:
+                shutil.copytree(upstream / source.get("skills_dir", "skills") / skill, target)
             for license_file in upstream.glob("LICENSE*"):
                 if license_file.is_file():
                     shutil.copy2(license_file, target / license_file.name)
             body = target / "SKILL.md"
             text = body.read_text()
-            # Standalone skill installation has no superpowers plugin namespace.
-            text = text.replace("superpowers:", "")
+            if name == "superpowers":
+                # Standalone installation has no plugin namespace, including in bundled instructions.
+                text = text.replace("superpowers:", "")
+                for reference in target.rglob("*.md"):
+                    if reference != body:
+                        original = reference.read_text()
+                        normalized = original.replace("superpowers:", "")
+                        if normalized != original:
+                            reference.write_text(normalized)
+            if skill in SUPERPOWERS_OPT_IN or skill in {"doc-updater", "docs-governance"}:
+                header, instructions = text.split("\n---\n", 1)
+                adapter = "superpowers-opt-in" if skill in SUPERPOWERS_OPT_IN else skill
+                overlay = (ROOT / f"setup/adapters/{adapter}.md").read_text().strip()
+                if skill == "doc-updater":
+                    header = re.sub(r"(?m)^(tools|model):[^\n]*\n?", "", header).rstrip()
+                if "disable-model-invocation:" not in header:
+                    header += "\ndisable-model-invocation: true"
+                text = f"{header}\n---\n\n{overlay}\n\n{instructions.lstrip()}"
             body.write_text(text)
+            if skill == "playwright-cli":
+                cli = prepare_playwright(state, resolved["sources"][name]["version"])
+                body.write_text(text + f"\n## Grounded setup\n\nUse {shlex.quote(str(cli))} in place of the bare CLI name in every command. Open with `--browser=chromium` to use the managed browser.\n")
+            if skill == "to-tickets":
+                shutil.copy2(ROOT / "setup/adapters/to-tickets.md", body)
             if skill == "requesting-code-review":
                 shutil.copy2(ROOT / "setup/adapters/requesting-code-review.md", body)
     for path in stage.glob("*/SKILL.md"):
+        name = path.parent.name
+        if name in manifest["sources"].get("anthropic-mcp-builder", {}).get("skills", ()):
+            continue
         # CLI/IDE Codex and Claude share bodies, not invocation-control metadata.
         agents = path.parent / "agents"
         agents.mkdir(exist_ok=True)
-        (agents / "openai.yaml").write_text("policy:\n  allow_implicit_invocation: false\n" if path.parent.name in manifest["local_skills"] else "policy:\n  allow_implicit_invocation: true\n")
+        explicit = name in manifest["local_skills"] or name in SUPERPOWERS_OPT_IN or name in {
+            "to-tickets", "web-design-guidelines", "doc-updater", "docs-governance",
+        }
+        (agents / "openai.yaml").write_text(
+            f"policy:\n  allow_implicit_invocation: {'false' if explicit else 'true'}\n"
+        )
     return prepare_openspec(state, resolved["openspec"])
 
 

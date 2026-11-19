@@ -2,6 +2,20 @@
 
 This file records release context that cannot be recovered from a list of pull request titles: significant design decisions, compatibility or migration guidance, and measured results. Routine changes are listed in the automatically generated GitHub Release notes and do not need a second entry here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The canonical plugin version is declared in [`grounded/plugin.json`](grounded/plugin.json). Git tags use `skills-v<version>`.
 
+## [0.5.0] — 2026-11-19
+
+### Added
+
+- Managed web QA with Playwright CLI and Chromium, plus Vercel's UI and accessibility guidelines.
+- Context7 documentation lookup through browser OAuth in the native Codex and Claude plugins, and Anthropic's original `mcp-builder` skill for MCP server development.
+- Addy guidance for API design, CI/CD, observability, performance, and security. ECC adds database migration, MySQL, progressive deployment, document updates, and read-only document audits. Matt Pocock's ticket workflow is adapted for approved tracker publication.
+
+### Workflow and upgrades
+
+- Rerun Grounded setup after updating the plugin. Setup records resolved stable releases and the default-branch exceptions for Vercel UI rules, ECC documentation governance, and Anthropic MCP Builder.
+- All 15 Superpowers v7 skills are available. Explicitly select its full workflow when needed. Setup omits its startup hooks. OpenSpec and Superpowers handoffs preserve one active implementation plan.
+- OpenSpec proposals and linked specs hold PRD content. Use ECC `doc-updater` for requested documentation updates and release notes, and `docs-governance` for a separate audit.
+
 ## [0.4.0] — 2026-11-05
 
 ### Changed

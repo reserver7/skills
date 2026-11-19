@@ -1,26 +1,35 @@
 # Development policy
 
-Follow explicit user instructions and the current project's constraints. Choose the lightest complete workflow; classify from the request and relevant code, without loading a routing skill or calling Jev.
+Follow user and project instructions. Use the lightest complete workflow. Skip routing skills and automatic Jev.
 
 ## One owner per job
 
+Pick one primary skill per job. Add another only for a distinct deliverable or check.
+
 - Clear local bug: use systematic-debugging, reproduce it, add/run a focused regression, make the smallest fix, verify. No SDD without material requirements/design uncertainty.
 - Typo/style fix: edit and verify only; skip SDD, broad tests, reviews and Jev.
-- Clear work spanning several parts: state scope and acceptance checks in chat, then implement. No separate plan file.
+- Multi-part clear work: state scope and acceptance in chat; no separate plan file.
+- Library/SDK/API/CLI/cloud docs: use Context7. Resolve the ID, then query by version and topic. Keep private data out of queries. If unavailable, use official upstream docs and say so.
+- API/interface contract: use Addy `api-and-interface-design` only for API boundary, versioning, error, or compatibility decisions; OpenSpec remains the owner when behavior must be agreed and traced.
+- Performance work: establish a baseline and target, then use Addy `performance-optimization` for a focused investigation; claims require before/after measurements.
+- Trust-boundary changes: use Addy `security-and-hardening` for targeted defensive review.
+- Observability: use Addy `observability-and-instrumentation` when adding or improving logs, metrics, traces, or alerts. For an active incident, use systematic debugging and the project's runbook.
+- Database changes: use ECC `database-migrations` for nontrivial schema/data migration planning and `mysql-patterns` only when the target is MySQL. Keep Postgres/Supabase on its existing specialist; use engine-native checks for other databases.
+- CI/CD: Addy `ci-cd-and-automation` by default. Add ECC `deployment-patterns` only for canary/blue-green/rolling rollout, automated abort/rollback gates, or coordinated migrations; ENG only for material release/data/security/test risk.
 - New behavior with material uncertainty, cross-system contracts, authorization, or persistent-data changes: use OpenSpec when requirements/design need agreement. File count is not the criterion. An OpenSpec directory alone never requires SDD.
 - Reuse an active change if the request belongs to it. Keep existing specs accurate when behavior changes. Escalate the workflow if investigation reveals material uncertainty; explain why.
-- If plausible interpretations change user-visible behavior, data or APIs, ask one blocker and wait; never assume a default. Sandbox/tool limits do not decide it. Use OpenSpec for durable agreement. Jev compares options only when requested/enabled; it cannot replace the user's decision.
-- For unresolved requirements/design/contracts in review or implementation, name OpenSpec and the active change (or say a new one is needed), ask only blockers, and stop. Do not approve/implement through the gap or create a parallel plan. Resume from agreed artifacts.
-- OpenSpec owns SDD requirements, design, tasks, validation and archive; `tasks.md` is the only plan. Follow its installed workflow; don't duplicate PRD/design/planning docs.
+- If plausible interpretations change behavior, data, or APIs, ask one blocker and wait. Never assume a default or let tool limits decide. Use OpenSpec for durable agreement; Jev compares only when requested and never replaces the user's choice.
+- For unresolved requirements, design or contracts, name OpenSpec and the active or needed change. Ask the blocker and stop. Resume review or implementation from agreed artifacts without creating a parallel plan.
+- For OpenSpec changes, its specs, design, and `tasks.md` own requirements and execution. Follow its validation and archive workflow. Avoid duplicate PRDs or plans.
 
 ## Implementation
 
-- Apply Ponytail to coding: reuse existing code, make the smallest complete change, preserve validation/error handling, avoid speculative abstractions. Load `ponytail` once when useful; never also activate its lifecycle hook/plugin or duplicate its full prompt here.
-- For bugs use `systematic-debugging`; use `test-driven-development` for nontrivial changes when authorized. For side-effect/dedup changes, test retries and preserve behavior; ask when the contract trades lost retryable work against duplicate effects. For expiring idempotency state, check reclamation and atomic concurrent check-and-record. Honor test limits, report unrun checks and never claim they pass; prose edits need no TDD.
-- For interface/data refactors, map caller assumptions and observable behavior first; preserve it or get approval to change. Test authorship and execution are separate permissions. When allowed, write characterization/regression tests for decision-critical contracts and failing tests first for other nontrivial changes. If testing is prohibited/deferred, state the constraint, unverified checks and risk.
-- Use `verification-before-completion` before asserting success. Report actual evidence and checks not run. Use `receiving-code-review` when acting on review feedback.
-- Implement from chat or the OpenSpec task. Do not use Superpowers planning/brainstorming/execution or subagent-development. Use worktrees only when the task needs isolation.
-- Use `requesting-code-review` for substantial/risky work or when asked; skip trivial edits. Don't duplicate Ponytail or pre-implementation review; re-review only changed findings or behavior.
+- Use Ponytail for coding: reuse code, make the smallest complete change, preserve validation/error handling, and avoid speculative abstractions. Load `ponytail` once when useful; skip its hooks/plugin and duplicated prompt.
+- Debug with `systematic-debugging`. Use TDD for nontrivial authorized changes; prove the intended failure and reuse an existing test that catches it. Preserve caller behavior and test retries, expiry reclamation, and atomic concurrency for side-effect/dedup changes. Honor test limits; report unrun checks and risks.
+- Before interface/data refactors, map caller assumptions and observable behavior; preserve them or get approval. Test authorship and execution are separate permissions. When allowed, add characterization/regression tests for critical contracts. Prose edits need no TDD.
+- Before claiming success, use `verification-before-completion`. Reuse passing checks run after the last relevant change if they meet completion criteria. Rerun affected checks after changes. Report evidence and omissions. Use `receiving-code-review` for review feedback.
+- Default to chat or OpenSpec. Use Superpowers planning/execution only on request. Record the active plan on handoff. Require explicit subagent approval. Use worktrees only for needed isolation.
+- Use `requesting-code-review` for substantial/risky work or on request. Skip trivial edits and duplicate reviews. Re-review changed findings or behavior only.
 
 ## Interactive questions
 
@@ -28,20 +37,20 @@ Follow explicit user instructions and the current project's constraints. Choose 
 
 ## Optional reviews and decisions
 
-- `plan-review-ceo`: unresolved product premise, scope or meaningful alternatives before implementation. When invoked, run its full scope challenge and eleven-section review; do not substitute a quick checklist.
-- `plan-review-eng`: important architecture, failure handling, security/data contracts, performance or test strategy before implementation. Run its full four-section review, coverage and execution-dependency analysis. Reuse settled CEO facts/decisions and examine technical detail/deltas; do not repeat the same interview or review completed code.
-- Suggest optional reviews with a concrete reason; execute when requested/accepted. Never automatically chain scope review, engineering review, ADR and Jev. A direct request for a named review authorizes that review only.
-- `adr`: record durable/cross-cutting or hard-to-reverse technical choices through its interview, three-perspective review and completeness gate. Keep feature-local choices in OpenSpec design or the existing project document. Link evidence instead of copying it.
-- Jev is optional decision support, only when requested or explicitly enabled for this task. Use the available evaluate tool with focused facts, choices and criteria. No tool means disclose unavailability. Do not send secrets, repeat unchanged evaluations, treat probabilities as proof, or substitute evaluation for tests/approval. Configuration and credentials live outside Git.
+- `plan-review-ceo`: for unsettled premise/scope; run its complete scope challenge, alternatives and eleven-section review.
+- `plan-review-eng`: for material technical risk; run its complete four-section review, coverage and dependency analysis. Reuse CEO decisions and review only technical deltas.
+- Suggest reviews with a concrete reason; execute only when requested/accepted. Never auto-chain CEO, ENG, ADR and Jev. A named request authorizes that review only.
+- `adr`: record durable/cross-cutting or hard-to-reverse choices using its full interview, three perspectives and completeness gate. Feature-local choices stay in OpenSpec design. Link evidence; do not copy it.
+- Jev is optional and used only when requested/enabled. Send focused facts/options/criteria, never secrets; do not repeat unchanged evaluations or treat scores as proof, tests or approval. Disclose tool unavailability. Keep credentials outside Git.
 
 ## Context and completion
 
-Read only the selected skill and relevant files. Use targeted searches for callers, contracts and applicable prior decisions; do not bulk-load all skills, specs or ADRs. Expand context when evidence requires it. Keep review output to actionable findings and unresolved decisions. Never trade required correctness/security checks for a token target.
+Read relevant files, callers, contracts and prior decisions. Keep reviews actionable and preserve required correctness/security checks.
 
 The installed skills are a curated subset. Do not install/activate full overlapping plugins alongside them. User instructions outrank this policy; do not silently bypass contradictory project rules.
 
 ## Commit messages
 
-When creating a commit, use Conventional Commits: `type(optional-scope): imperative summary`. Choose a specific type such as `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, or `revert`; mark breaking changes with `!`.
+Use Conventional Commits (`feat|fix|docs|refactor|test|chore|build|ci|perf|revert`), imperative summary, and `!` for breaking changes.
 
 For releases, follow the target repository's documented version/tag scheme. Synchronize canonical and host-specific manifests before tagging; reject a tag/version mismatch. Build from the tagged source. Publishing a GitHub Release does not by itself publish a provider marketplace update. For Grounded itself, use its bundled `setup/release.py` and repository release instructions.
