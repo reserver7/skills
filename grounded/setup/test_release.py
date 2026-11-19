@@ -24,6 +24,20 @@ class ReleaseTests(unittest.TestCase):
             path.write_text(json.dumps(data))
         self.output = self.root.parent / "grounded.zip"
 
+    def test_grounded_package_contains_context7_oauth_for_both_hosts(self):
+        release.package(release.ROOT, "skills-v" + json.loads(
+            (release.ROOT / "plugin.json").read_text())["version"], self.output)
+        with zipfile.ZipFile(self.output) as archive:
+            codex = json.loads(archive.read("mcp.json"))["mcpServers"]["context7"]
+            claude = json.loads(archive.read(".mcp.json"))["mcpServers"]["context7"]
+        self.assertEqual(codex["url"], "https://mcp.context7.com/mcp/oauth")
+        self.assertEqual(claude["url"], codex["url"])
+        self.assertEqual(codex["type"], "streamable-http")
+        self.assertEqual(claude["type"], "http")
+        self.assertEqual(codex["extensions"]["com.openai"]["auth"]["type"], "oauth")
+        self.assertNotIn("headers", codex)
+        self.assertNotIn("headers", claude)
+
     def test_bump_updates_both_hosts_without_losing_metadata(self):
         release.bump(self.root, "0.2.0")
         for path in self.paths:

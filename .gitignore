@@ -8,3 +8,7 @@ __pycache__/
 .venv/
 venv/
 *.log
+
+# Local review notes and OpenSpec working files
+.ai/
+openspec/

@@ -106,5 +106,125 @@ class ConfigureTests(unittest.TestCase):
         self.assertFalse(self.claude.exists())
 
 
+class WebDesignGuidelinesTests(unittest.TestCase):
+    def test_setup_packages_vercel_rules_as_a_managed_skill(self):
+        manifest = manage.load(manage.ROOT / "manifest.json")
+        source = manifest["sources"]["vercel-guidelines"]
+        manifest = {"sources": {"vercel-guidelines": source}, "local_skills": []}
+        commit = "a" * 40
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            upstream = root / "upstream"
+            upstream.mkdir()
+            (upstream / "LICENSE").write_text("MIT License\n")
+            (upstream / "command.md").write_text("# Vercel UI rules\n")
+            stage = root / "skills"
+            stage.mkdir()
+            resolved = {"sources": {"vercel-guidelines": {"commit": commit}}, "openspec": {}}
+            with patch.object(manage, "fetch_source", return_value=upstream), patch.object(manage, "prepare_openspec"):
+                manage.prepare(root, manifest, stage, resolved)
+
+            skill = stage / "web-design-guidelines"
+            self.assertEqual((skill / "references/command.md").read_text(), "# Vercel UI rules\n")
+            self.assertIn(commit, (skill / "SKILL.md").read_text())
+            self.assertIn("MIT License", (skill / "LICENSE").read_text())
+            self.assertIn("allow_implicit_invocation: false", (skill / "agents/openai.yaml").read_text())
+
+
+class EccDocumentationTests(unittest.TestCase):
+    def test_setup_preserves_ecc_documentation_workflows_and_audit_files(self):
+        sources = manage.load(manage.ROOT / "manifest.json")["sources"]
+        self.assertIn("doc-updater", sources["ecc"]["skills"])
+        self.assertEqual(sources["ecc-docs-governance"]["skills"], ["docs-governance"])
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            upstream = root / "upstream"
+            agent = upstream / "agents/doc-updater.md"
+            agent.parent.mkdir(parents=True)
+            (upstream / "LICENSE").write_text("MIT License\n")
+            agent.write_text("---\nname: doc-updater\ndescription: ECC docs\ntools: Read\nmodel: haiku\n---\n\nOriginal updater workflow.\n")
+            governance = upstream / ".agents/skills/docs-governance"
+            (governance / "scripts").mkdir(parents=True)
+            (governance / "scripts/audit-docs.py").write_text("# Upstream script\n")
+            (governance / "SKILL.md").write_text(
+                "---\nname: docs-governance\ndescription: ECC audit\n---\n\nOriginal audit workflow.\n"
+            )
+            stage = root / "skills"
+            stage.mkdir()
+            manifest = {"sources": {
+                "ecc": {**sources["ecc"], "skills": ["doc-updater"]},
+                "ecc-docs-governance": sources["ecc-docs-governance"],
+            }, "local_skills": []}
+            resolved = {"sources": {name: {} for name in manifest["sources"]}, "openspec": {}}
+            with patch.object(manage, "fetch_source", return_value=upstream), patch.object(manage, "prepare_openspec"):
+                manage.prepare(root, manifest, stage, resolved)
+            updater = (stage / "doc-updater/SKILL.md").read_text()
+            self.assertIn("Original updater workflow.", updater)
+            self.assertNotIn("model: haiku", updater)
+            self.assertIn("Original audit workflow.", (stage / "docs-governance/SKILL.md").read_text())
+            self.assertEqual((stage / "docs-governance/scripts/audit-docs.py").read_bytes(),
+                             (governance / "scripts/audit-docs.py").read_bytes())
+            for name in ("doc-updater", "docs-governance"):
+                self.assertIn("disable-model-invocation: true", (stage / name / "SKILL.md").read_text())
+                self.assertIn("allow_implicit_invocation: false", (stage / name / "agents/openai.yaml").read_text())
+
+
+class SuperpowersWorkflowTests(unittest.TestCase):
+    def test_full_inventory_uses_opt_in_workflow_without_bootstrap_hooks(self):
+        manifest = manage.load(manage.ROOT / "manifest.json")
+        source = manifest["sources"]["superpowers"]
+        self.assertEqual(len(source["skills"]), 15)
+        self.assertFalse(set(source["skills"]) & set(manifest["incompatible_skills"]))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            upstream = root / "upstream"
+            (upstream / "hooks").mkdir(parents=True)
+            (upstream / "hooks/session-start").write_text("upstream hook")
+            (upstream / "LICENSE").write_text("MIT License\n")
+            for name in ("brainstorming", "systematic-debugging"):
+                skill = upstream / "skills" / name
+                skill.mkdir(parents=True)
+                (skill / "SKILL.md").write_text(f"---\nname: {name}\n---\nUse superpowers:verification-before-completion.\n")
+                (skill / "helper.md").write_text("Use superpowers:writing-plans.\n")
+            stage = root / "stage"
+            stage.mkdir()
+            selected = {"local_skills": [], "sources": {"superpowers": {
+                **source, "skills": ["brainstorming", "systematic-debugging"],
+            }}}
+            with patch.object(manage, "fetch_source", return_value=upstream), patch.object(manage, "prepare_openspec"):
+                manage.prepare(root, selected, stage, {"sources": {"superpowers": {}}, "openspec": {}})
+            workflow = stage / "brainstorming"
+            self.assertIn("disable-model-invocation: true", (workflow / "SKILL.md").read_text())
+            self.assertIn("allow_implicit_invocation: false", (workflow / "agents/openai.yaml").read_text())
+            self.assertIn("allow_implicit_invocation: true",
+                          (stage / "systematic-debugging/agents/openai.yaml").read_text())
+            self.assertEqual((workflow / "helper.md").read_text(), "Use writing-plans.\n")
+            self.assertFalse((stage / "hooks").exists())
+
+
+class McpBuilderTests(unittest.TestCase):
+    def test_setup_preserves_the_complete_upstream_skill(self):
+        manifest = manage.load(manage.ROOT / "manifest.json")
+        source = manifest["sources"]["anthropic-mcp-builder"]
+        self.assertEqual(source["skills"], ["mcp-builder"])
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            upstream = root / "upstream"
+            skill = upstream / "skills/mcp-builder"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "reference").mkdir()
+            (skill / "LICENSE.txt").write_text("Apache License\nVersion 2.0\n")
+            (skill / "SKILL.md").write_bytes(b"---\r\nname: mcp-builder\r\n---\r\nOriginal instructions.\r\n")
+            (skill / "scripts/evaluation.py").write_text("# Original script\n")
+            (skill / "reference/guide.md").write_text("Original reference\n")
+            stage = root / "stage"
+            stage.mkdir()
+            manifest = {"sources": {"anthropic-mcp-builder": source}, "local_skills": []}
+            resolved = {"sources": {"anthropic-mcp-builder": {}}, "openspec": {}}
+            with patch.object(manage, "fetch_source", return_value=upstream), patch.object(manage, "prepare_openspec"):
+                manage.prepare(root, manifest, stage, resolved)
+            self.assertEqual(manage.hashes(stage / "mcp-builder"), manage.hashes(skill))
+
+
 if __name__ == "__main__":
     unittest.main()
