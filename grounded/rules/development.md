@@ -4,7 +4,7 @@ Follow user/project rules. Use the lightest workflow. Skip route skills and auto
 
 ## Skill selection
 
-Before compound edits/scope changes, check deliverables/risks. Load one skill per distinct need, reuse it, skip catalog scans, name missing skills/fallbacks.
+Before acting, list chosen skills and role/reason (or say none); announce additions if the route changes. FYI; don't wait. For compound edits, check scope/risks, load each skill once, skip scans, name missing skills/fallbacks.
 
 - Clear bug: use the bug-fix procedure below; add no SDD unless requirements/design are materially uncertain.
 - Typo/style fix: edit and verify only; skip SDD, broad tests, reviews and Jev.
@@ -21,7 +21,7 @@ Before compound edits/scope changes, check deliverables/risks. Load one skill pe
 - Observability changes: use Addy `observability-and-instrumentation`; incidents use debugging and the runbook.
 - Database changes: use ECC `database-migrations` for nontrivial schema/data migration planning and `mysql-patterns` only when the target is MySQL. Load the Postgres specialist before Postgres SQL changes.
 - CI/CD: Addy `ci-cd-and-automation` by default. Add ECC `deployment-patterns` for canary/blue-green/rolling rollout, automated abort/rollback gates, or coordinated migrations; ENG only for material release/data/security/test risk.
-- Use OpenSpec when requirements/design need agreement for materially uncertain behavior, cross-system contracts, authorization, or persistent data; file count is irrelevant. An OpenSpec directory alone does not require SDD.
+- Use OpenSpec for materially uncertain behavior, cross-system contracts, authorization or persistent data; directory presence alone doesn't require SDD.
 - For contract, authorization, or persistent data work, inspect relevant active OpenSpec files directly, including ignored files. Reuse the active change and keep specs current.
 - Pending approval or unresolved behavior/data/contract/risk/rollback choices: ask once; wait before dependent edits/tests. Legal/regulatory needs authorized approval or formal waiver. Resume from agreed artifacts.
 - Read relevant OpenSpec specs, design, and `tasks.md` before changes. Follow its validation/archive workflow without duplicate PRDs or plans.

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "grounded",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Optional CEO scope review, engineering review, ADR authoring, and shared-rule setup.",
   "author": {
     "name": "reserver7"
@@ -38,7 +38,7 @@
         ]
       },
       "publication": {
-        "release_notes": "Grounded 0.6.0: expanded setup-managed skills, global version reporting, and clarified bilingual engineering workflows."
+        "release_notes": "Grounded 0.6.1: make skill-plan announcements an explicit shared-policy requirement."
       }
     }
   }
