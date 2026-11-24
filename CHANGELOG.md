@@ -1,6 +1,25 @@
 # Changelog — Grounded
 
+**English** | [한국어](CHANGELOG.ko.md)
+
 This file records release context that cannot be recovered from a list of pull request titles: significant design decisions, compatibility or migration guidance, and measured results. Routine changes are listed in the automatically generated GitHub Release notes and do not need a second entry here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The canonical plugin version is declared in [`grounded/plugin.json`](grounded/plugin.json). Git tags use `skills-v<version>`.
+
+## [Unreleased]
+
+## [0.6.0] — 2026-11-24
+
+### Added
+
+- Setup-managed CLI-Hub discovery and CLI-Anything harness-building skills, with task-based routing and user authorization before package installation.
+- An explicit-only Craft Anything workflow for personal portfolio reference studies, with its official platform CLI managed and SHA-256 verified by setup.
+- Anthropic `frontend-design` and Vercel React best-practice and composition skills, with upstream MIT declaration checks for repositories without a separate license file.
+- A global `grounded -v` command for inspecting the package, applied host policy, and installed dependency revisions.
+- English and Korean versions of the main guides, changelog, and validation records.
+
+### Changed
+
+- Refined shared skill-routing, approval, versioned Context7 fallback, and release rules; setup and its policy tests now enforce the current wording.
+- Removed the one-time legacy archive and incompatibility lists after migration to Grounded-managed skill sources.
 
 ## [0.5.0] — 2026-11-19
 

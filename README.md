@@ -1,12 +1,14 @@
 # Grounded
 
+**English** | [한국어](README.ko.md)
+
 [![Latest release](https://img.shields.io/github/v/release/reserver7/skills?filter=skills-v%2A&sort=semver)](https://github.com/reserver7/skills/releases/latest)
 
 Grounded is a shared engineering environment for Codex and Claude Code. One setup per host installs the managed skills and development policy. Use the skills that match the task.
 
 - **Plan and implement.** Use OpenSpec for durable requirements, Ponytail for focused implementation, and Superpowers for debugging, TDD, code review, and verification. All 15 Superpowers v7 skills are available. Select its full planning and execution workflow explicitly.
-- **Verify and ship.** Use the managed browser for QA, Vercel's rules for UI reviews, and dedicated guidance for API design, databases, security, performance, observability, and delivery.
-- **Document and integrate.** Write release notes or update docs with `doc-updater`, run separate audits with `docs-governance`, and prepare tracker issues with `to-tickets`. The native plugin provides Context7 OAuth. Use `mcp-builder` when developing an MCP server.
+- **Design, verify, and ship.** Use `frontend-design` to create distinctive interfaces, `web-design-guidelines` for separate UI and accessibility reviews, and the managed browser for QA. Vercel's React skills guide React/Next implementation and composition; use Context7 for version-specific docs and Addy for measured performance investigations.
+- **Document and integrate.** Write release notes or update docs with `doc-updater`, run separate audits with `docs-governance`, and prepare tracker issues with `to-tickets`. The native plugin provides Context7 OAuth. Use `mcp-builder` for MCP servers, CLI-Hub to find existing app CLIs, CLI-Anything to build a harness only when no suitable CLI exists, and explicitly invoke Craft Anything for authorized portfolio reference studies.
 
 See the [full skill inventory](grounded/README.md#skills-and-tools) and [Codex and Claude invocation guide](grounded/docs/workflow.md#skill-calls).
 
@@ -41,10 +43,12 @@ After setup, start a new conversation to load the shared rules. For technical do
 
 ## Update and restore
 
+Once installed on your PATH, `grounded -v` shows applied host policies and the recorded dependency revisions from any directory. See [version commands](grounded/README.md#versioning) for the one-time install.
+
 - **Codex:** The marketplace tracks `main`. To refresh immediately, run `codex plugin marketplace upgrade grounded`, start a new conversation, and rerun `$grounded:setup`.
 - **Claude Code:** Run `git -C ~/grounded-skills pull --ff-only`, restart with the same `--plugin-dir`, and rerun `/grounded:setup`.
 
-Setup resolves upstream versions again on each run and records the installed versions and commits locally. It backs up known overlapping skills and plugin data before migrating them. See [dependency selection](grounded/SOURCES.md) and [restore and uninstall](grounded/README.md#local-install-and-updates).
+Setup resolves upstream versions again on each run and records the installed versions and commits locally. It backs up duplicate managed skills and conflicting plugin data before migration. See [dependency selection](grounded/SOURCES.md) and [restore and uninstall](grounded/README.md#local-install-and-updates).
 
 ## Repository
 

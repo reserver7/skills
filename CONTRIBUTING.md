@@ -1,5 +1,7 @@
 # Contributing
 
+**English** | [한국어](CONTRIBUTING.ko.md)
+
 ## Branches
 
 - `main` is the only long-lived branch and must stay releasable. Do not force-push or delete it.
