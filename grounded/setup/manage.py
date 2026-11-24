@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shlex
 import shutil
@@ -16,14 +17,14 @@ import sys
 import tempfile
 import time
 import tomllib
+import zipfile
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 from release import validate_release_notes
+from version_report import BEGIN, END, managed_block, print_installed_versions
 
 ROOT = Path(__file__).resolve().parents[1]
-BEGIN = "<!-- skills-environment:begin -->"
-END = "<!-- skills-environment:end -->"
 
 
 def run(*args, **kwargs):
@@ -161,9 +162,9 @@ def github_repo(url):
 
 
 def resolve_dependencies(manifest):
-    resolved = {"resolved_at": datetime.now(timezone.utc).isoformat(), "sources": {}}
+    resolved = {"resolved_at": datetime.now(timezone.utc).isoformat(), "sources": {}, "tools": {}}
     for name, source in manifest["sources"].items():
-        if name in {"vercel-guidelines", "ecc-docs-governance", "anthropic-mcp-builder"}:
+        if name in {"vercel-guidelines", "vercel-agent-skills", "ecc-docs-governance", "anthropic-skills"}:
             ref = run("git", "ls-remote", "--exit-code", source["url"], "HEAD")
             match = re.fullmatch(r"([0-9a-f]{40})\tHEAD", ref)
             if not match:
@@ -196,6 +197,45 @@ def resolve_dependencies(manifest):
             "commit": commit, "release_url": release.get("html_url", release_url),
         }
 
+    for name, tool in manifest.get("tools", {}).items():
+        owner, repo = github_repo(tool["url"])
+        release_url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
+        release = remote_json(release_url, "application/vnd.github+json")
+        tag = release.get("tag_name") if isinstance(release, dict) else None
+        version = tag.removeprefix("v") if isinstance(tag, str) else None
+        if (not version or release.get("draft") or release.get("prerelease")
+                or not stable_version(version)):
+            raise ValueError(f"No stable semantic-version release is available for {name} at {tool['url']}")
+        system = platform.system().lower()
+        machine = platform.machine().lower()
+        if system == "darwin":
+            expected = f"craft-anything-cli-{version}-macos-universal.zip"
+            kind = "macos-zip"
+        elif system == "linux" and machine in {"x86_64", "amd64"}:
+            expected = f"craft-anything-cli-{version}-linux-x86_64.AppImage"
+            kind = "linux-appimage"
+        elif system == "linux" and machine in {"aarch64", "arm64"}:
+            expected = f"craft-anything-cli-{version}-linux-aarch64.AppImage"
+            kind = "linux-appimage"
+        else:
+            raise ValueError(f"Craft Anything CLI has no supported release asset for {system}/{machine}")
+        assets = release.get("assets", [])
+        matches = [asset for asset in assets if asset.get("name") == expected]
+        if len(matches) != 1:
+            raise ValueError(f"Expected one official {expected} release asset for {name}")
+        asset = matches[0]
+        digest = asset.get("digest", "")
+        if not isinstance(digest, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+            raise ValueError(f"Official release asset {expected} has no valid SHA-256 digest")
+        download_url = asset.get("browser_download_url")
+        if not isinstance(download_url, str) or not download_url.startswith("https://github.com/"):
+            raise ValueError(f"Official release asset {expected} has an invalid download URL")
+        resolved["tools"][name] = {
+            "url": tool["url"], "version": version, "asset": expected,
+            "download_url": download_url, "sha256": digest.removeprefix("sha256:"),
+            "kind": kind,
+        }
+
     package = manifest["openspec"]
     registry = package["registry"].rstrip("/")
     if registry != "https://registry.npmjs.org":
@@ -222,6 +262,8 @@ def print_resolved(resolved):
     print("Resolved dependencies:")
     for name, item in resolved["sources"].items():
         print(f"  {name}: {item['version']} ({item['commit']})")
+    for name, item in resolved.get("tools", {}).items():
+        print(f"  {name}: {item['version']} ({item['asset']}, sha256:{item['sha256']})")
     package = resolved["openspec"]
     print(f"  openspec: {package['version']} ({package['integrity']})")
 
@@ -235,6 +277,8 @@ def print_previous(registry):
         print("  dependency receipt migrated from the legacy installation")
     for name, item in resolved.get("sources", {}).items():
         print(f"  {name}: {item.get('version', 'unknown')} ({item.get('commit', 'unknown')})")
+    for name, item in resolved.get("tools", {}).items():
+        print(f"  {name}: {item.get('version', 'unknown')} ({item.get('asset', 'unknown')})")
     package = registry.get("openspec", {})
     if package:
         print(f"  openspec: {package.get('version', 'unknown')} ({package.get('integrity', 'unknown')})")
@@ -249,6 +293,24 @@ def skill_name(path):
     text = path.read_text()
     match = re.search(r"(?m)^name:\s*['\"]?([a-z0-9-]+)", text)
     return match.group(1) if match else path.parent.name
+
+
+def set_skill_description(text, description):
+    if not text.startswith("---\n"):
+        raise ValueError("Skill has no YAML frontmatter")
+    end = text.find("\n---\n", 4)
+    if end < 0:
+        raise ValueError("Skill YAML frontmatter is not closed")
+    header = text[4:end].splitlines()
+    starts = [index for index, line in enumerate(header) if line.startswith("description:")]
+    if len(starts) != 1:
+        raise ValueError("Skill must have one frontmatter description")
+    start = starts[0]
+    stop = start + 1
+    while stop < len(header) and (not header[stop].strip() or header[stop][0].isspace()):
+        stop += 1
+    header[start:stop] = [f"description: {description}"]
+    return "---\n" + "\n".join(header) + text[end:]
 
 
 def safe_component(value):
@@ -272,16 +334,6 @@ def rule_text(path):
     return text + ("\n\n" if text and not text.endswith("\n\n") else "") + block + "\n"
 
 
-def managed_block(text):
-    if text.count(BEGIN) != 1 or text.count(END) != 1:
-        return None
-    start = text.index(BEGIN)
-    end = text.index(END)
-    if start > end:
-        return None
-    return text[start:end + len(END)]
-
-
 def block_hash(text):
     block = managed_block(text)
     return hashlib.sha256(block.encode()).hexdigest() if block else None
@@ -303,7 +355,7 @@ def conflicts(home, manifest, registry, hosts):
     desired = set(manifest["local_skills"])
     for source in manifest["sources"].values():
         desired.update(source["skills"])
-    banned = desired | set(manifest["incompatible_skills"])
+    banned = desired
     roots = [home / ".agents/skills"]
     if "codex" in hosts:
         roots.append(home / ".codex/skills")
@@ -336,7 +388,7 @@ def conflicts(home, manifest, registry, hosts):
 def native_conflicts(args, manifest, registry, backup):
     """Move known global skill duplicates aside and disable overlapping host plugins."""
     hosts = ["codex", "claude"] if args.host == "both" else [args.host]
-    names = set(manifest["local_skills"] + manifest["incompatible_skills"] + manifest.get("archive_skills", []))
+    names = set(manifest["local_skills"])
     dependency_names = set()
     for source in manifest["sources"].values():
         names.update(source["skills"])
@@ -574,24 +626,33 @@ def validate_repo(manifest):
     if plugin.get("version") != claude.get("version"):
         raise ValueError("Codex and Claude plugin versions differ; run setup/release.py bump")
     validate_release_notes(plugin)
+    for name, tool in manifest.get("tools", {}).items():
+        if (not re.fullmatch(r"[a-z0-9-]+", name)
+                or github_repo(tool.get("url", "")) != ["storytold", "craft-anything"]
+                or not isinstance(tool.get("purpose"), str)):
+            raise ValueError(f"Unsupported managed tool declaration: {name}")
     names = list(manifest["local_skills"])
     for name, source in manifest["sources"].items():
         github_repo(source["url"])
-        license_file = "skills/mcp-builder/LICENSE.txt" if name == "anthropic-mcp-builder" else "LICENSE"
-        if source.get("license") not in {"MIT", "Apache-2.0"} or source.get("license_file") != license_file:
-            raise ValueError("Each external skill source must declare its supported license file")
+        license_file = "skills/mcp-builder/LICENSE.txt" if name == "anthropic-skills" else "LICENSE"
+        has_license_file = source.get("license_file") == license_file
+        has_mit_readme_declaration = (
+            source.get("license") == "MIT"
+            and source.get("license_file") is None
+            and source.get("license_declaration_file") == "README.md"
+        )
+        if source.get("license") not in {"MIT", "Apache-2.0"} or not (has_license_file or has_mit_readme_declaration):
+            raise ValueError("Each external skill source must declare a supported license file or an explicit MIT README declaration")
         if source.get("skills_dir", "skills") not in {"skills", "skills/engineering", ".agents/skills"}:
             raise ValueError("Unsupported external skills directory")
         if not source.get("skills") or any(not re.fullmatch(r"[a-z0-9-]+", name) for name in source["skills"]):
             raise ValueError("Each source must declare safe skill names")
+        skill_dirs = source.get("skill_dirs", {})
+        if (not isinstance(skill_dirs, dict)
+                or any(skill not in source["skills"] or not re.fullmatch(r"[a-z0-9-]+", directory)
+                       for skill, directory in skill_dirs.items())):
+            raise ValueError("Source skill directory mappings must reference declared skills and safe directories")
         names.extend(source["skills"])
-    archive_names = manifest.get("archive_skills", [])
-    if (not isinstance(archive_names, list)
-            or any(not isinstance(name, str) or not re.fullmatch(r"[a-z0-9-]+", name)
-                   for name in archive_names)
-            or len(archive_names) != len(set(archive_names))
-            or set(archive_names) & set(names)):
-        raise ValueError("Archive skill names must be unique, safe, and separate from installed skills")
     package = manifest["openspec"]
     if package.get("registry") != "https://registry.npmjs.org" or not re.fullmatch(r"@[a-z0-9-]+/[a-z0-9._-]+", package.get("package", "")):
         raise ValueError("OpenSpec must use the official npm package and registry")
@@ -631,7 +692,23 @@ def fetch_source(state, name, source, resolved):
 
 
 def verify_source_license(upstream, name, source):
-    license_path = upstream / source["license_file"]
+    license_file = source.get("license_file")
+    if not license_file and (upstream / "LICENSE").is_file():
+        license_file = "LICENSE"
+    if not license_file:
+        declaration_file = source.get("license_declaration_file")
+        if source.get("license") != "MIT" or declaration_file != "README.md":
+            raise ValueError(f"Unsupported license declaration fallback for {name}")
+        readme = upstream / declaration_file
+        if not readme.is_file():
+            raise ValueError(f"Upstream MIT declaration is missing for {name}: {readme}")
+        text = readme.read_text(errors="replace")
+        if not re.search(r"(?im)^#{1,6}[ \t]+License[ \t]*\r?\n(?:[ \t]*\r?\n)*[ \t]*MIT[ \t]*$", text):
+            raise ValueError(f"Expected an explicit MIT license declaration in {name}: {readme}")
+        print(f"NOTICE: {name} declares MIT in README.md but has no LICENSE text file; setup is using the upstream declaration.")
+        return
+
+    license_path = upstream / license_file
     if not license_path.is_file():
         raise ValueError(f"Confirmed {source['license']} license file is missing for {name}: {license_path}")
     text = license_path.read_text(errors="replace")
@@ -706,6 +783,69 @@ def prepare_playwright(state, version):
     return wrapper
 
 
+def prepare_craft_anything(state, tool):
+    prefix = state / "tools" / "craft-anything-cli" / tool["version"]
+    executable = prefix / "craft-anything-cli"
+    wrapper = prefix / "craft-anything"
+
+    if prefix.exists():
+        binary = executable if tool["kind"] == "macos-zip" else prefix / "craft-anything.AppImage"
+        if binary.is_file() and hashlib.sha256(binary.read_bytes()).hexdigest() == tool["sha256"] and wrapper.is_file():
+            return wrapper
+        shutil.rmtree(prefix)
+
+    prefix.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="craft-anything-", dir=prefix.parent) as temp:
+        staged = Path(temp) / "package"
+        staged.mkdir()
+        archive_path = Path(temp) / tool["asset"]
+        request = Request(tool["download_url"], headers={"User-Agent": "Grounded-setup"})
+        digest = hashlib.sha256()
+        total = 0
+        try:
+            with urlopen(request, timeout=60) as response, archive_path.open("wb") as output:
+                while chunk := response.read(1024 * 1024):
+                    total += len(chunk)
+                    if total > 250 * 1024 * 1024:
+                        raise ValueError(f"Craft Anything release asset exceeds the size limit: {tool['asset']}")
+                    digest.update(chunk)
+                    output.write(chunk)
+        except (HTTPError, URLError, TimeoutError, OSError) as error:
+            raise ValueError(f"Could not download official Craft Anything asset {tool['asset']}: {error}") from error
+        if digest.hexdigest() != tool["sha256"]:
+            raise ValueError(f"SHA-256 mismatch for official Craft Anything asset {tool['asset']}")
+
+        if tool["kind"] == "macos-zip":
+            try:
+                with zipfile.ZipFile(archive_path) as archive:
+                    candidates = [entry for entry in archive.infolist()
+                                  if Path(entry.filename).name == "craft-anything-cli" and not entry.is_dir()]
+                    mode_type = (candidates[0].external_attr >> 16) & 0o170000 if len(candidates) == 1 else 0
+                    if (len(candidates) != 1 or mode_type not in {0, 0o100000}
+                            or candidates[0].file_size > 150 * 1024 * 1024):
+                        raise ValueError("Craft Anything macOS archive must contain one bounded regular CLI binary")
+                    staged_executable = staged / executable.name
+                    staged_executable.write_bytes(archive.read(candidates[0]))
+            except zipfile.BadZipFile as error:
+                raise ValueError(f"Craft Anything macOS asset is not a valid ZIP archive: {tool['asset']}") from error
+            staged_executable.chmod(0o755)
+            runner = executable
+            prefix_option = ""
+        else:
+            appimage = "craft-anything.AppImage"
+            staged_binary = staged / appimage
+            shutil.copy2(archive_path, staged_binary)
+            staged_binary.chmod(0o755)
+            runner = prefix / appimage
+            prefix_option = " --cli"
+
+        wrapper_text = "#!/bin/sh\nexec " + shlex.quote(str(runner)) + prefix_option + ' "$@"\n'
+        (staged / wrapper.name).write_text(wrapper_text)
+        (staged / wrapper.name).chmod(0o755)
+        staged.rename(prefix)
+    return wrapper
+
+
 SUPERPOWERS_OPT_IN = frozenset({
     "brainstorming", "diagnosing-superpowers", "dispatching-parallel-agents",
     "executing-plans", "finishing-a-development-branch", "subagent-driven-development",
@@ -721,10 +861,19 @@ def prepare(state, manifest, stage, resolved):
         verify_source_license(upstream, name, source)
         for skill in source["skills"]:
             target = stage / skill
-            if name == "anthropic-mcp-builder":
+            if name == "anthropic-skills":
                 shutil.copytree(upstream / "skills" / skill, target)
-                continue
-            if name == "vercel-guidelines":
+                if skill == "mcp-builder":
+                    continue
+            elif name == "cli-anything" and skill == "cli-anything":
+                # Vendor the upstream methodology into a temporary home, then let Grounded manage it.
+                with tempfile.TemporaryDirectory(prefix="cli-anything-", dir=stage) as temp:
+                    run("bash", str(upstream / "codex-skill/scripts/install.sh"),
+                        env={**os.environ, "CODEX_HOME": temp})
+                    shutil.copytree(Path(temp) / "skills/cli-anything", target)
+            elif name == "cli-anything":
+                shutil.copytree(upstream / "skills" / skill, target)
+            elif name == "vercel-guidelines":
                 references = target / "references"
                 references.mkdir(parents=True)
                 shutil.copy2(upstream / "command.md", references / "command.md")
@@ -733,16 +882,48 @@ def prepare(state, manifest, stage, resolved):
                 commit = resolved["sources"][name]["commit"]
                 (target / "SKILL.md").write_text(adapter + f"\nInstalled Vercel rules revision: `{commit}`.\n")
                 continue
-            if skill == "doc-updater":
+            elif skill == "doc-updater":
                 target.mkdir()
                 shutil.copy2(upstream / "agents/doc-updater.md", target / "SKILL.md")
             else:
-                shutil.copytree(upstream / source.get("skills_dir", "skills") / skill, target)
+                source_skill = source.get("skill_dirs", {}).get(skill, skill)
+                shutil.copytree(upstream / source.get("skills_dir", "skills") / source_skill, target)
             for license_file in upstream.glob("LICENSE*"):
                 if license_file.is_file():
                     shutil.copy2(license_file, target / license_file.name)
             body = target / "SKILL.md"
             text = body.read_text()
+            if skill == "cli-anything":
+                description = (
+                    "description: Use when the user wants Codex to build, refine, test, validate, or list CLI-Anything harnesses for GUI applications or source repositories. Adapts the full CLI-Anything methodology to Codex without changing the generated Python harness format."
+                )
+                if description not in text or "# CLI-Anything for Codex" not in text or "## Read the Full Methodology First" not in text:
+                    raise ValueError("Upstream CLI-Anything skill changed; review its Grounded adapter before setup")
+                text = text.replace(
+                    description,
+                    "description: Use when the user asks Codex or Claude Code to build, refine, test, validate, or list a CLI-Anything harness for software. Prefer an existing suitable CLI; this skill is not for ordinary shell commands or MCP server work.",
+                ).replace("# CLI-Anything for Codex", "# CLI-Anything")
+                text = text.replace(
+                    "## Read the Full Methodology First",
+                    "## Grounded Routing\n\nUse this only for building, refining, testing, validating, or listing a software-specific CLI harness. First check `cli-hub-meta-skill` for a suitable existing CLI. Do not use it for ordinary shell commands, routine application development, or MCP server work. Keep generated harness files in the target software repository. Ask before installing generated packages or changing application/system state; never bypass credentials, permissions, or service limits.\n\n## Read the Full Methodology First",
+                )
+            elif skill == "cli-hub-meta-skill":
+                if "## Quick Start" not in text:
+                    raise ValueError("Upstream CLI-Hub skill changed; review its Grounded adapter before setup")
+                text = text.replace(
+                    "## Quick Start",
+                    "## Grounded Routing\n\nUse this to discover and inspect an existing CLI when the requested application workflow lacks a suitable CLI or MCP integration. Start with search, `info`, or read-only preflight. Do not install `cli-anything-hub` or any listed CLI without the user's approval. If `cli-hub` is unavailable, use the official live catalog for read-only discovery. Scope any approved install to the task; never bypass credentials, permissions, or service limits.\n\n## Quick Start",
+                )
+            elif skill in {"frontend-design", "vercel-react-best-practices", "vercel-composition-patterns"}:
+                descriptions = {
+                    "frontend-design": "Use when creating or visually redesigning a user interface. Use web-design-guidelines for a separate UI or accessibility review.",
+                    "vercel-react-best-practices": "Use when implementing or refactoring React or Next.js code for framework-specific patterns. Use Context7 for version-specific API documentation and Addy performance-optimization for measured performance investigations.",
+                    "vercel-composition-patterns": "Use when changing React component APIs, compound components, or reducing boolean-prop complexity; not for routine React edits or visual design.",
+                }
+                text = set_skill_description(text, descriptions[skill])
+                header, instructions = text.split("\n---\n", 1)
+                overlay = (ROOT / f"setup/adapters/{skill}.md").read_text().strip()
+                text = f"{header}\n---\n\n{overlay}\n\n{instructions.lstrip()}"
             if name == "superpowers":
                 # Standalone installation has no plugin namespace, including in bundled instructions.
                 text = text.replace("superpowers:", "")
@@ -757,8 +938,8 @@ def prepare(state, manifest, stage, resolved):
                 adapter = "superpowers-opt-in" if skill in SUPERPOWERS_OPT_IN else skill
                 overlay = (ROOT / f"setup/adapters/{adapter}.md").read_text().strip()
                 if skill == "doc-updater":
-                    header = re.sub(r"(?m)^(tools|model):[^\n]*\n?", "", header).rstrip()
-                if "disable-model-invocation:" not in header:
+                    header = re.sub(r"(?m)^(tools|model|disable-model-invocation):[^\n]*\n?", "", header).rstrip()
+                elif "disable-model-invocation:" not in header:
                     header += "\ndisable-model-invocation: true"
                 text = f"{header}\n---\n\n{overlay}\n\n{instructions.lstrip()}"
             body.write_text(text)
@@ -769,15 +950,29 @@ def prepare(state, manifest, stage, resolved):
                 shutil.copy2(ROOT / "setup/adapters/to-tickets.md", body)
             if skill == "requesting-code-review":
                 shutil.copy2(ROOT / "setup/adapters/requesting-code-review.md", body)
+    craft_tool = resolved.get("tools", {}).get("craft-anything-cli")
+    if craft_tool:
+        skill_path = stage / "craft-anything" / "SKILL.md"
+        if not skill_path.is_file():
+            raise ValueError("Craft Anything CLI is configured without its managed skill")
+        cli = prepare_craft_anything(state, craft_tool)
+        skill_text = skill_path.read_text()
+        marker = "Grounded installs and verifies the official CLI and appends its managed executable path here. Run Craft Anything only through that executable."
+        if marker not in skill_text:
+            raise ValueError("Craft Anything skill setup marker changed; review the managed adapter")
+        skill_path.write_text(skill_text.replace(
+            marker,
+            f"Grounded installs and verifies the official CLI. Run Craft Anything only through `{cli}`.",
+        ))
     for path in stage.glob("*/SKILL.md"):
         name = path.parent.name
-        if name in manifest["sources"].get("anthropic-mcp-builder", {}).get("skills", ()):
+        if name == "mcp-builder":
             continue
         # CLI/IDE Codex and Claude share bodies, not invocation-control metadata.
         agents = path.parent / "agents"
         agents.mkdir(exist_ok=True)
         explicit = name in manifest["local_skills"] or name in SUPERPOWERS_OPT_IN or name in {
-            "to-tickets", "web-design-guidelines", "doc-updater", "docs-governance",
+            "to-tickets", "docs-governance",
         }
         (agents / "openai.yaml").write_text(
             f"policy:\n  allow_implicit_invocation: {'false' if explicit else 'true'}\n"
@@ -1132,7 +1327,7 @@ def doctor(args, manifest, state, registry):
             directory = ancestor / relative
             if directory.exists() and not directory.is_relative_to(args.home / ".agents") and not directory.is_relative_to(args.home / ".claude"):
                 for file in directory.rglob("SKILL.md"):
-                    if skill_name(file) in set(manifest["incompatible_skills"]) | {n for s in manifest["sources"].values() for n in s["skills"]} | set(manifest["local_skills"]):
+                    if skill_name(file) in {n for s in manifest["sources"].values() for n in s["skills"]} | set(manifest["local_skills"]):
                         errors.append(f"Project/ancestor overlapping skill: {file}")
         if (ancestor / ".git").exists():
             break
@@ -1394,7 +1589,7 @@ def uninstall(args, state, registry, manifest):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["setup", "install", "configure", "doctor", "restore", "uninstall", "check", "openspec"])
+    parser.add_argument("command", choices=["setup", "install", "configure", "doctor", "restore", "uninstall", "check", "openspec", "version"])
     parser.add_argument("--host", choices=["codex", "claude", "both"], default="both")
     parser.add_argument("--home", type=Path, default=Path.home(), help="Installation home (default: current user's home)")
     parser.add_argument("--project", type=Path, help="Project path for doctor or OpenSpec")
@@ -1403,6 +1598,10 @@ def main():
     if extra and args.command != "openspec":
         parser.error("Unexpected arguments: " + " ".join(extra))
     args.home = args.home.expanduser().resolve()
+    if args.command == "version":
+        print("Package:", load(ROOT / "plugin.json")["version"])
+        print_installed_versions(args.home, args.host)
+        return
     if args.command in {"setup", "install", "configure", "doctor", "restore", "uninstall", "openspec"} and args.home == Path.home().resolve():
         defaults = {"CODEX_HOME": args.home / ".codex", "CLAUDE_CONFIG_DIR": args.home / ".claude"}
         relevant = list(defaults) if args.host == "both" else ["CODEX_HOME" if args.host == "codex" else "CLAUDE_CONFIG_DIR"]

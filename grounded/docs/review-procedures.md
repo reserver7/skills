@@ -1,5 +1,7 @@
 # Review procedure preservation
 
+**English** | [한국어](review-procedures.ko.md)
+
 The integration selects optional stages; it must not silently replace a selected full review with a short checklist. Detailed resources are loaded at the relevant phase to avoid imposing their cost on unrelated tasks.
 
 | Procedure | Retained checks and outputs | Integration adjustment |

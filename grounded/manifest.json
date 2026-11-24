@@ -4,6 +4,12 @@
     "package": "@fission-ai/openspec",
     "registry": "https://registry.npmjs.org"
   },
+  "tools": {
+    "craft-anything-cli": {
+      "url": "https://github.com/storytold/craft-anything",
+      "purpose": "Reference-study workflow for authorized personal portfolio projects"
+    }
+  },
   "sources": {
     "superpowers": {
       "url": "https://github.com/obra/superpowers.git",
@@ -68,11 +74,28 @@
       "license_file": "LICENSE",
       "skills": ["web-design-guidelines"]
     },
-    "anthropic-mcp-builder": {
+    "vercel-agent-skills": {
+      "url": "https://github.com/vercel-labs/agent-skills.git",
+      "license": "MIT",
+      "license_file": null,
+      "license_declaration_file": "README.md",
+      "skills": ["vercel-react-best-practices", "vercel-composition-patterns"],
+      "skill_dirs": {
+        "vercel-react-best-practices": "react-best-practices",
+        "vercel-composition-patterns": "composition-patterns"
+      }
+    },
+    "anthropic-skills": {
       "url": "https://github.com/anthropics/skills.git",
       "license": "Apache-2.0",
       "license_file": "skills/mcp-builder/LICENSE.txt",
-      "skills": ["mcp-builder"]
+      "skills": ["mcp-builder", "frontend-design"]
+    },
+    "cli-anything": {
+      "url": "https://github.com/HKUDS/CLI-Anything.git",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "skills": ["cli-anything", "cli-hub-meta-skill"]
     },
     "matt": {
       "url": "https://github.com/mattpocock/skills.git",
@@ -103,33 +126,8 @@
   "local_skills": [
     "plan-review-ceo",
     "plan-review-eng",
-    "adr"
-  ],
-  "archive_skills": [
-    "agent-browser",
-    "context7-mcp",
-    "deployment-engineer",
-    "devops-cicd",
-    "find-skills",
-    "frontend-design",
-    "javascript-typescript",
-    "orca-cli",
-    "orca-computer-use",
-    "orchestration",
-    "product-to-tickets",
-    "prompt-fix",
-    "vercel-composition-patterns",
-    "vercel-react-best-practices",
-    "ui-accessibility-review"
-  ],
-  "incompatible_skills": [
-    "openspec-superpowers",
-    "ponytail-review",
-    "office-hours",
-    "prd",
-    "scope-review",
-    "engineering-review",
-    "architecture-decision"
+    "adr",
+    "craft-anything"
   ],
   "incompatible_plugins": [
     "superpowers",
