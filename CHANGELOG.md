@@ -6,6 +6,10 @@ This file records release context that cannot be recovered from a list of pull r
 
 ## [Unreleased]
 
+### Changed
+
+- Promote the skill-plan announcement from workflow guidance to the shared policy, including its informational-only behavior and announcing route changes.
+
 ## [0.6.0] — 2026-11-24
 
 ### Added

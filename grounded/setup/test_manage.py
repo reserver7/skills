@@ -109,6 +109,13 @@ class ConfigureTests(unittest.TestCase):
 
 
 class DevelopmentPolicyTests(unittest.TestCase):
+    def test_announces_skill_plan_before_action(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "Before acting, list chosen skills and role/reason (or say none); announce additions if the route changes. FYI; don't wait.",
+            policy,
+        )
+
     def test_context7_precedes_version_sensitive_work_and_counts_ci_action_tags(self):
         policy = (manage.ROOT / "rules/development.md").read_text()
         self.assertIn(
