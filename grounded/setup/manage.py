@@ -295,24 +295,6 @@ def skill_name(path):
     return match.group(1) if match else path.parent.name
 
 
-def set_skill_description(text, description):
-    if not text.startswith("---\n"):
-        raise ValueError("Skill has no YAML frontmatter")
-    end = text.find("\n---\n", 4)
-    if end < 0:
-        raise ValueError("Skill YAML frontmatter is not closed")
-    header = text[4:end].splitlines()
-    starts = [index for index, line in enumerate(header) if line.startswith("description:")]
-    if len(starts) != 1:
-        raise ValueError("Skill must have one frontmatter description")
-    start = starts[0]
-    stop = start + 1
-    while stop < len(header) and (not header[stop].strip() or header[stop][0].isspace()):
-        stop += 1
-    header[start:stop] = [f"description: {description}"]
-    return "---\n" + "\n".join(header) + text[end:]
-
-
 def safe_component(value):
     if not re.fullmatch(r"[A-Za-z0-9._-]+", value):
         raise ValueError(f"Unsafe plugin path component: {value!r}")
@@ -669,8 +651,12 @@ def validate_repo(manifest):
             raise ValueError(f"Local skill exceeds the 6KB instruction budget: {path}")
         if "disable-model-invocation: true" not in path.read_text():
             raise ValueError(f"Optional local skill must be explicit-only: {path}")
-    if len((ROOT / "rules/development.md").read_bytes()) > 6500:
-        raise ValueError("Default policy exceeds the 6.5KB budget")
+    validate_policy_budget((ROOT / "rules/development.md").read_bytes())
+
+
+def validate_policy_budget(policy_bytes):
+    if len(policy_bytes) > 14000:
+        raise ValueError("Default policy exceeds the 14KB budget")
 
 
 def fetch_source(state, name, source, resolved):
@@ -889,67 +875,10 @@ def prepare(state, manifest, stage, resolved):
                 source_skill = source.get("skill_dirs", {}).get(skill, skill)
                 shutil.copytree(upstream / source.get("skills_dir", "skills") / source_skill, target)
             for license_file in upstream.glob("LICENSE*"):
-                if license_file.is_file():
+                if license_file.is_file() and not (target / license_file.name).exists():
                     shutil.copy2(license_file, target / license_file.name)
-            body = target / "SKILL.md"
-            text = body.read_text()
-            if skill == "cli-anything":
-                description = (
-                    "description: Use when the user wants Codex to build, refine, test, validate, or list CLI-Anything harnesses for GUI applications or source repositories. Adapts the full CLI-Anything methodology to Codex without changing the generated Python harness format."
-                )
-                if description not in text or "# CLI-Anything for Codex" not in text or "## Read the Full Methodology First" not in text:
-                    raise ValueError("Upstream CLI-Anything skill changed; review its Grounded adapter before setup")
-                text = text.replace(
-                    description,
-                    "description: Use when the user asks Codex or Claude Code to build, refine, test, validate, or list a CLI-Anything harness for software. Prefer an existing suitable CLI; this skill is not for ordinary shell commands or MCP server work.",
-                ).replace("# CLI-Anything for Codex", "# CLI-Anything")
-                text = text.replace(
-                    "## Read the Full Methodology First",
-                    "## Grounded Routing\n\nUse this only for building, refining, testing, validating, or listing a software-specific CLI harness. First check `cli-hub-meta-skill` for a suitable existing CLI. Do not use it for ordinary shell commands, routine application development, or MCP server work. Keep generated harness files in the target software repository. Ask before installing generated packages or changing application/system state; never bypass credentials, permissions, or service limits.\n\n## Read the Full Methodology First",
-                )
-            elif skill == "cli-hub-meta-skill":
-                if "## Quick Start" not in text:
-                    raise ValueError("Upstream CLI-Hub skill changed; review its Grounded adapter before setup")
-                text = text.replace(
-                    "## Quick Start",
-                    "## Grounded Routing\n\nUse this to discover and inspect an existing CLI when the requested application workflow lacks a suitable CLI or MCP integration. Start with search, `info`, or read-only preflight. Do not install `cli-anything-hub` or any listed CLI without the user's approval. If `cli-hub` is unavailable, use the official live catalog for read-only discovery. Scope any approved install to the task; never bypass credentials, permissions, or service limits.\n\n## Quick Start",
-                )
-            elif skill in {"frontend-design", "vercel-react-best-practices", "vercel-composition-patterns"}:
-                descriptions = {
-                    "frontend-design": "Use when creating or visually redesigning a user interface. Use web-design-guidelines for a separate UI or accessibility review.",
-                    "vercel-react-best-practices": "Use when implementing or refactoring React or Next.js code for framework-specific patterns. Use Context7 for version-specific API documentation and Addy performance-optimization for measured performance investigations.",
-                    "vercel-composition-patterns": "Use when changing React component APIs, compound components, or reducing boolean-prop complexity; not for routine React edits or visual design.",
-                }
-                text = set_skill_description(text, descriptions[skill])
-                header, instructions = text.split("\n---\n", 1)
-                overlay = (ROOT / f"setup/adapters/{skill}.md").read_text().strip()
-                text = f"{header}\n---\n\n{overlay}\n\n{instructions.lstrip()}"
-            if name == "superpowers":
-                # Standalone installation has no plugin namespace, including in bundled instructions.
-                text = text.replace("superpowers:", "")
-                for reference in target.rglob("*.md"):
-                    if reference != body:
-                        original = reference.read_text()
-                        normalized = original.replace("superpowers:", "")
-                        if normalized != original:
-                            reference.write_text(normalized)
-            if skill in SUPERPOWERS_OPT_IN or skill in {"doc-updater", "docs-governance"}:
-                header, instructions = text.split("\n---\n", 1)
-                adapter = "superpowers-opt-in" if skill in SUPERPOWERS_OPT_IN else skill
-                overlay = (ROOT / f"setup/adapters/{adapter}.md").read_text().strip()
-                if skill == "doc-updater":
-                    header = re.sub(r"(?m)^(tools|model|disable-model-invocation):[^\n]*\n?", "", header).rstrip()
-                elif "disable-model-invocation:" not in header:
-                    header += "\ndisable-model-invocation: true"
-                text = f"{header}\n---\n\n{overlay}\n\n{instructions.lstrip()}"
-            body.write_text(text)
             if skill == "playwright-cli":
-                cli = prepare_playwright(state, resolved["sources"][name]["version"])
-                body.write_text(text + f"\n## Grounded setup\n\nUse {shlex.quote(str(cli))} in place of the bare CLI name in every command. Open with `--browser=chromium` to use the managed browser.\n")
-            if skill == "to-tickets":
-                shutil.copy2(ROOT / "setup/adapters/to-tickets.md", body)
-            if skill == "requesting-code-review":
-                shutil.copy2(ROOT / "setup/adapters/requesting-code-review.md", body)
+                prepare_playwright(state, resolved["sources"][name]["version"])
     craft_tool = resolved.get("tools", {}).get("craft-anything-cli")
     if craft_tool:
         skill_path = stage / "craft-anything" / "SKILL.md"
@@ -974,7 +903,10 @@ def prepare(state, manifest, stage, resolved):
         explicit = name in manifest["local_skills"] or name in SUPERPOWERS_OPT_IN or name in {
             "to-tickets", "docs-governance",
         }
-        (agents / "openai.yaml").write_text(
+        metadata = agents / "openai.yaml"
+        if metadata.exists() or metadata.is_symlink():
+            continue
+        metadata.write_text(
             f"policy:\n  allow_implicit_invocation: {'false' if explicit else 'true'}\n"
         )
     return prepare_openspec(state, resolved["openspec"])

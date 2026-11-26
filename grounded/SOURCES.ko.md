@@ -18,7 +18,7 @@
 | [Anthropic Skills](https://github.com/anthropics/skills) | setup 시 기본 브랜치 HEAD를 커밋 SHA로 기록. 스킬별 Apache-2.0 `LICENSE.txt` | 원본 지침과 라이선스를 포함한 upstream `mcp-builder`, `frontend-design` 전체 폴더 |
 | [CLI-Anything](https://github.com/HKUDS/CLI-Anything) | 최신 안정 GitHub Release를 전체 커밋 SHA로 가져옴. 루트 Apache-2.0 `LICENSE` | 공식 설치 프로그램이 포함하는 기준 방법론 리소스를 갖춘 upstream Codex `cli-anything` 스킬과 정식 스킬 경로의 `cli-hub-meta-skill`. 둘 다 Grounded 관리 선택형 스킬이며 upstream은 Codex 생성기 연동을 실험적/커뮤니티 기능으로 표시 |
 | [Craft Anything](https://github.com/storytold/craft-anything) | 호스트 플랫폼용 최신 안정 GitHub Release 자산과 공식 GitHub 자산의 SHA-256 확인. macOS universal ZIP 또는 Linux x86_64/aarch64 AppImage | Grounded 비공개 버전 캐시의 공식 CLI 바이너리. 명시 호출 전용 `craft-anything` 스킬로만 제공 |
-| [Matt Pocock Skills](https://github.com/mattpocock/skills) | 최신 안정 GitHub Release, 루트 MIT LICENSE | `skills/engineering/to-tickets`와 OpenSpec 및 승인된 트래커 게시를 위한 Grounded 어댑터 |
+| [Matt Pocock Skills](https://github.com/mattpocock/skills) | 최신 안정 GitHub Release, 루트 MIT LICENSE | `skills/engineering/to-tickets` 원본 |
 | [Everything Claude Code (ECC)](https://github.com/affaan-m/ecc) | 최신 안정 GitHub Release를 전체 커밋 SHA로 가져옴. MIT `LICENSE` | 복잡한 점진 배포용 `deployment-patterns`, 중요한 DB 변경용 `database-migrations`, MySQL 전용 `mysql-patterns`, 명시 호출 독립 스킬인 `agents/doc-updater.md` |
 | [ECC documentation governance](https://github.com/affaan-m/ECC/tree/main/.agents/skills/docs-governance) | setup 시 기본 브랜치 HEAD를 커밋 SHA로 기록. 루트 MIT LICENSE | upstream 감사 스크립트와 참조를 포함한 `docs-governance`. 요구사항과 ADR에는 기존 Grounded 책임자 사용 |
 | 로컬 검토 및 ADR 스킬 | `skills/plan-review-ceo/`, `skills/plan-review-eng/`, `skills/adr/` | 이전 로컬 구현에서 분리·조정한 독립 절차. 외부 검토 플러그인을 설치하거나 다운로드하지 않음 |
@@ -30,12 +30,9 @@ Setup은 검증된 Git 체크아웃에서 외부 스킬 폴더, Vercel 규칙, u
 
 ## 의도적인 조정
 
-- 독립 Superpowers 스킬에서는 플러그인 전용 `superpowers:` 접두사를 제거합니다.
-- `requesting-code-review`는 upstream `code-reviewer.md`를 보존하면서 [이식 가능한 어댑터](setup/adapters/requesting-code-review.md)를 사용합니다. 미커밋 작업, 기존 OpenSpec/대화 요구사항, 사용 가능한 리뷰어 도구, 독립 리뷰어를 사용할 수 없는 경우의 명시적 처리까지 다룹니다. 사소한 편집에서는 리뷰어 에이전트를 실행하지 않습니다.
-- Grounded는 Superpowers 계획·실행·지원 스킬을 명시적 선택형으로 설치하고 계획 인계 기록을 공유합니다. Superpowers와 Ponytail 시작 훅은 setup 대상이 아닙니다.
-- 설치된 모든 스킬에는 Codex 호출 메타데이터가 있습니다. 로컬 검토, ADR, Craft Anything 스킬은 두 호스트에서 명시적으로만 호출합니다.
+- Setup은 외부 스킬 파일을 원본 그대로 설치합니다. 선택 기준은 [공통 규칙](rules/development.md)에 있습니다. Codex용 호출 설정은 원본 파일이 없는 경우에만 별도로 추가합니다.
+- Vercel의 원본 명령 문서는 Grounded 진입점에서 참조합니다. ECC doc-updater는 원본 문서를 그대로 SKILL.md로 복사합니다.
 - CLI-Hub 탐색과 CLI-Anything 하네스 생성은 작업별로 선택하는 별도 워크플로입니다. 먼저 검색하고 CLI 패키지 설치나 앱/시스템 상태 변경 전에 허가를 받습니다. 전체 upstream 플러그인을 설치하지 않으며 생성된 하네스가 기존 자격 증명·권한·사용량 한도를 우회하게 하지 않습니다.
-- Grounded는 양쪽 호스트를 위해 upstream CLI-Anything 스킬 설명을 조정하고 라우팅/설치 보호를 추가합니다. 방법론 원본 파일은 공식 설치 프로그램에서 가져와 포함합니다.
 - Craft Anything은 초기 알파의 포트폴리오 레퍼런스 조사 절차이며 명시적으로만 호출합니다. Setup은 공식 릴리스의 플랫폼 CLI를 다운로드하고 캐시 전에 SHA-256을 확인합니다. 제3자 레퍼런스에는 클린룸 모드를 사용하며 보호된 자산이나 콘텐츠를 복사하지 않습니다.
 - `frontend-design`은 시각적 UI 제작, `web-design-guidelines`는 별도 UI/접근성 검토를 담당합니다. Vercel React 모범 사례는 React/Next 구현을 안내하고 컴포지션 패턴은 컴포넌트 API와 아키텍처 작업에 사용합니다. Context7은 버전에 맞는 공식 API 문서를 제공하고 Addy 성능 안내는 측정 기반 조사에 사용합니다.
 - CEO 검토는 전제/기존 코드/이상적 상태 도전, 대안 2~3개, 사용자 선택 접근과 범위 모드, 11개 검토 섹션(UX는 조건부), 다이어그램/복구 지도/테스트 범위, 이슈별 상호작용, 판정과 검토 기록을 유지합니다. 상세 섹션·평가표·템플릿은 해당 단계에서 불러옵니다.

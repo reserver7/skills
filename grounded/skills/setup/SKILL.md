@@ -19,7 +19,7 @@ python3 "<plugin-root>/setup/manage.py" setup --host <codex-or-claude> --dry-run
 python3 "<plugin-root>/setup/manage.py" setup --host <codex-or-claude>
 ```
 
-Superpowers design and execution workflows are explicit opt-ins. Setup retains Grounded's default Ponytail/OpenSpec routing and omits Superpowers startup hooks.
+Superpowers design and execution workflows are explicit opt-ins. Setup installs the shared development policy for skill selection and omits Superpowers startup hooks.
 
 The native plugin already declares the Context7 OAuth server. After setup, direct the user to the host's MCP connection controls to select Grounded's Context7 server and complete browser sign-in if needed. The host manages the OAuth session. Do not ask for an API key or create a project-level MCP entry.
 
