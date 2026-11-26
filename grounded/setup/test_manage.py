@@ -11,6 +11,15 @@ from unittest.mock import patch
 import manage
 
 
+class PolicyBudgetTests(unittest.TestCase):
+    def test_accepts_policy_at_14000_bytes(self):
+        self.assertIsNone(manage.validate_policy_budget(b"x" * 14000))
+
+    def test_rejects_policy_at_14001_bytes(self):
+        with self.assertRaisesRegex(ValueError, "Default policy exceeds the 14KB budget"):
+            manage.validate_policy_budget(b"x" * 14001)
+
+
 class ConfigureTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -109,39 +118,228 @@ class ConfigureTests(unittest.TestCase):
 
 
 class DevelopmentPolicyTests(unittest.TestCase):
+    def test_explicit_superpowers_workflows_load_the_opt_in_gate(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "When explicitly selected, use `using-superpowers` as the gate before task-specific Superpowers procedures",
+            policy,
+        )
+        self.assertIn("Do not load it for default Grounded work.", policy)
+
+    def test_installer_accepts_current_policy_size(self):
+        manifest = manage.load(manage.ROOT / "manifest.json")
+        manage.validate_repo(manifest)
+
     def test_announces_skill_plan_before_action(self):
         policy = (manage.ROOT / "rules/development.md").read_text()
         self.assertIn(
-            "Before acting, list chosen skills and role/reason (or say none); announce additions if the route changes. FYI; don't wait.",
+            "After inspection, announce only selected skills/roles (or none); never preview candidates.",
             policy,
         )
 
     def test_context7_precedes_version_sensitive_work_and_counts_ci_action_tags(self):
         policy = (manage.ROOT / "rules/development.md").read_text()
         self.assertIn(
-            "Version-sensitive edits/reviews/recommendations: before acting",
+            "For a pinned library/API/CLI/cloud service or CI action used by the work, resolve/query Context7 for that version before dependent work.",
             policy,
         )
-        self.assertIn("CI tags count;", policy)
-        self.assertIn("inspect its official release/tag or package artifact;", policy)
-        self.assertIn("nearest-version docs don't prove it.", policy)
-        self.assertIn("disclose the gap; don't claim verified.", policy)
+        self.assertIn("fetch the exact official remote release, tag, or package artifact", policy)
+        self.assertIn("Lack of a local installation is not unavailability", policy)
+        self.assertIn("unversioned current docs do not prove a pinned version", policy)
+        self.assertIn("A task spec or acceptance test states intended/repository behavior, not external API support.", policy)
+        self.assertIn("Verify each library separately", policy)
+        self.assertIn("pause only API-dependent edits or claims and continue independent authorized work", policy)
+        self.assertIn("if one route fails, try one other official exact-version source", policy)
+
+    def test_skill_selection_maps_changed_surfaces_without_forcing_bundles(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("For existing work/reviews, preflight before skills:", policy)
+        self.assertIn("Finish preflight before skill selection; never combine `SKILL.md` reads with that pass.", policy)
+        self.assertIn("Read each once and handle prerequisites before dependent work.", policy)
+        self.assertIn("Map owners to observed behavior and explicitly requested target surfaces", policy)
+        self.assertIn("Cover affected/requested surfaces and matching material risks", policy)
+        self.assertIn("even when enforcement files are unchanged", policy)
+        self.assertIn("Include inherited trust boundaries even when enforcement files are unchanged.", policy)
+        self.assertIn("Cover required roles before dependent work", policy)
+        self.assertIn("Match evidenced/requested tech/services to owner cues; read every matching skill before source fallback.", policy)
+        self.assertIn("blocked sources don't erase matches.", policy)
+        self.assertIn("Never enumerate/search `.agents/skills`", policy)
+        self.assertIn("open matched `SKILL.md` by exact path, including ignored files", policy)
+        self.assertIn("if missing, query host inventory by exact name once.", policy)
+        self.assertIn("a broad description or generic \"always\" wording does not broaden its trigger", policy)
+        self.assertIn("Any Supabase product or SDK use, including an injected client/API or Realtime channel: use `supabase`, even when the edited file does not import the package.", policy)
+        self.assertIn("Injected clients retain their service owner", policy)
+        self.assertIn("Workflow skills do not replace domain expertise.", policy)
+        self.assertIn("Ponytail is optional; use only when its minimal-diff role adds value beyond the selected specialist.", policy)
+        self.assertIn("Skip when Superpowers directs edits.", policy)
+
+    def test_documentation_skill_is_reserved_for_reconciliation_work(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "Use ECC `doc-updater` for coordinated cross-document/contract changes (even short ones)",
+            policy,
+        )
+        self.assertIn("Direct-edit short factual changes only within one doc.", policy)
+
+    def test_requested_target_surfaces_are_owned_before_files_or_dependencies_exist(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("explicitly requested target surfaces", policy)
+        self.assertIn("even if files/dependencies/source are absent", policy)
+        self.assertIn("absence does not erase ownership", policy)
+        self.assertIn("read every matching skill before source fallback", policy)
+
+    def test_openspec_discovery_checks_ignored_paths_before_reporting_absence(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("including ignored via ignore-aware search", policy)
+
+    def test_quality_per_token_reuses_evidence_without_omitting_needed_checks(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("Optimize quality per token: choose the smallest set of distinct skills and checks", policy)
+        self.assertIn("Carry valid evidence; add or rerun only for changed behavior, prior misses, uncovered risk, or requested broader coverage.", policy)
+        self.assertIn("for identical coverage at one revision, run either the focused test or project suite, not both unless acceptance requires both", policy)
+        self.assertIn("never omit needed expertise or a check solely to save tokens.", policy)
 
     def test_react_specialist_is_conditional_on_framework_behavior(self):
         policy = (manage.ROOT / "rules/development.md").read_text()
         self.assertIn(
-            "React/Next framework behavior changes: load Vercel `vercel-react-best-practices`",
+            "Use `vercel-react-best-practices` when changed React/Next components, hooks, rendering, routing, or broader integration rely on framework semantics.",
             policy,
         )
-        self.assertIn("Skip typo/copy/docs and non-framework edits.", policy)
-        self.assertNotIn("React/Next edits: always load", policy)
+        self.assertIn("Component API/composition: `vercel-composition-patterns`.", policy)
+        self.assertNotIn("always load `vercel-react-best-practices`", policy)
+
+    def test_resume_requires_explicit_interrupted_task_continuity(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "At fresh start, read applicable AGENTS.md before skill selection; name no skill until task evidence is reviewed.",
+            policy,
+        )
+        self.assertIn("context-mode availability, repo familiarity, or chat history alone do not qualify.", policy)
+
+    def test_new_features_do_not_trigger_systematic_debugging(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("A failing test that only shows requested new behavior is absent is the expected red step; do not load debugging solely for that.", policy)
+
+    def test_high_risk_behavior_uses_exact_test_first_evidence(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("Use `test-driven-development` for nontrivial changes when tests are allowed; skip it for low-risk localized bugs with an exact existing focused test.", policy)
+        self.assertIn("Treat public API/module-contract behavior, trust boundaries, destructive or persistent data, concurrency/idempotency, external effects, and rollback as nontrivial regardless of size.", policy)
+        self.assertIn("existing tests count only if they assert that path", policy)
+        self.assertIn(
+            "The TDD red step must be an assertion failure about missing behavior, not an error or setup failure; correct the test/harness before implementation.",
+            policy,
+        )
+        self.assertIn("Unless prohibited, run relevant focused tests after changes; edit-only limits writes, not checks.", policy)
+        self.assertIn(
+            "After test/tool runs, inspect the worktree diff; remove generated artifacts outside scope and report all remaining changed files.",
+            policy,
+        )
+        self.assertIn("Post-fix tests are regression evidence, not red evidence.", policy)
+
+    def test_structured_input_checks_cover_invalid_field_values(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "For structured input formats, test malformed structure and plausible structure with invalid field values",
+            policy,
+        )
+
+    def test_workload_identity_and_tenant_boundaries_use_security_skill(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "Authentication, authorization (including workload identity/OIDC, CI token grants, and production credentials), untrusted input, or personal data: Addy `security-and-hardening`.",
+            policy,
+        )
+        self.assertIn(
+            "Creating, migrating, or reviewing a tenant boundary or its schema also uses `security-and-hardening`",
+            policy,
+        )
+
+    def test_skill_reporting_includes_read_guidance_and_distinguishes_no_finding(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "When asked to report skills, list every skill whose instructions were read and its distinct role; say if it yielded no actionable guidance.",
+            policy,
+        )
+
+    def test_completion_verification_is_not_a_default_for_implementation(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("only for a requested requirement-by-requirement acceptance audit of a deliverable", policy)
+        self.assertIn(
+            "A request to run a focused check, test scenarios, or validate skill routing uses the relevant domain/project checks.",
+            policy,
+        )
+        self.assertIn(
+            "Do not load it solely because tests/checks ran or a completion report is next; if no listed trigger applies, do not call it.",
+            policy,
+        )
+        self.assertIn("For code review, use `requesting-code-review` under the triggers below", policy)
+        self.assertIn(
+            "Load `requesting-code-review` whenever asked to review source/code, even when framed as a security, UX, or other domain review",
+            policy,
+        )
+        self.assertIn("do not also load completion verification solely to repeat its requirements/diff pass.", policy)
 
     def test_ui_review_route_requires_the_review_specialist(self):
         policy = (manage.ROOT / "rules/development.md").read_text()
         self.assertIn(
-            "UI/accessibility review-only requests: always load `web-design-guidelines` before assessing",
+            "UI/accessibility review, even source-only: `web-design-guidelines`; no running page is required for source findings.",
             policy,
         )
+
+    def test_browser_checks_fall_back_to_the_managed_playwright_path(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "if `playwright-cli` is unavailable, use the managed path in `docs/workflow.md`",
+            policy,
+        )
+
+    def test_decision_interaction_and_review_boundaries_are_explicit(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        for phrase in (
+            "Ask only for the earliest unresolved decision needed to unblock work.",
+            "When decisions are sequential/conditional, request only the first required owner decision and wait; don't request later approvals in the same handoff.",
+            "The closing request must name only that first owner decision; after the user replies, reassess any downstream approval.",
+            "the final sentence must make a direct request addressed to the user",
+            "A status or conditional next step is not a request.",
+            "Never ask the user to decide in place of that authority; name the owner.",
+            "Static or server-rendered output from initial props does not verify an event-driven transition.",
+            "A helper/unit test does not verify the caller's component, hook, route, or integration lifecycle unless it exercises that boundary.",
+            "A passing test supports only the boundary it executed; report higher untested behavior as code-reviewed but unverified.",
+            "Load `requesting-code-review` whenever asked to review source/code",
+            "Read it without delegation",
+            "disclose that it was not independent",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, policy)
+
+    def test_auth_and_tenant_fixes_always_trigger_the_review_skill(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("any auth/authz, tenant-isolation", policy)
+        self.assertIn("regardless of patch size", policy)
+        self.assertIn("Creating, migrating, or reviewing a tenant boundary or its schema", policy)
+        self.assertIn("Read it without delegation", policy)
+
+    def test_requested_source_review_uses_review_and_domain_roles(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "it covers requirements, base/diff, callers/tests, and verdict",
+            policy,
+        )
+        self.assertIn("Add the matching domain specialist for distinct analysis.", policy)
+
+    def test_postgres_migration_reviews_use_the_postgres_specialist(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn("including read-only reviews of existing SQL, schemas, and migrations", policy)
+
+    def test_blockers_pause_only_dependent_work(self):
+        policy = (manage.ROOT / "rules/development.md").read_text()
+        self.assertIn(
+            "defer skills, edits, and tests for that slice unless a separate authorized review is requested.",
+            policy,
+        )
+        self.assertIn("Before stopping, inspect remaining requested slices and execute every authorized one", policy)
+        self.assertIn("including requested existing checks and required matched-skill reads.", policy)
+        self.assertIn("stop only when no independent work remains.", policy)
 
 
 class LicenseVerificationTests(unittest.TestCase):
@@ -231,13 +429,14 @@ class EccDocumentationTests(unittest.TestCase):
                 manage.prepare(root, manifest, stage, resolved)
             updater = (stage / "doc-updater/SKILL.md").read_text()
             self.assertIn("Original updater workflow.", updater)
-            self.assertNotIn("model: haiku", updater)
+            self.assertEqual(updater, (upstream / "agents/doc-updater.md").read_text())
             self.assertIn("Original audit workflow.", (stage / "docs-governance/SKILL.md").read_text())
             self.assertEqual((stage / "docs-governance/scripts/audit-docs.py").read_bytes(),
                              (governance / "scripts/audit-docs.py").read_bytes())
             self.assertNotIn("disable-model-invocation:", updater)
             self.assertIn("allow_implicit_invocation: true", (stage / "doc-updater/agents/openai.yaml").read_text())
-            self.assertIn("disable-model-invocation: true", (stage / "docs-governance/SKILL.md").read_text())
+            self.assertEqual((stage / "docs-governance/SKILL.md").read_bytes(),
+                             (governance / "SKILL.md").read_bytes())
             self.assertIn("allow_implicit_invocation: false", (stage / "docs-governance/agents/openai.yaml").read_text())
 
 
@@ -269,11 +468,12 @@ class SuperpowersWorkflowTests(unittest.TestCase):
             with patch.object(manage, "fetch_source", return_value=upstream), patch.object(manage, "prepare_openspec"):
                 manage.prepare(root, selected, stage, {"sources": {"superpowers": {}}, "openspec": {}})
             workflow = stage / "brainstorming"
-            self.assertIn("disable-model-invocation: true", (workflow / "SKILL.md").read_text())
+            self.assertEqual((workflow / "SKILL.md").read_bytes(),
+                             (upstream / "skills/brainstorming/SKILL.md").read_bytes())
             self.assertIn("allow_implicit_invocation: false", (workflow / "agents/openai.yaml").read_text())
             self.assertIn("allow_implicit_invocation: true",
                           (stage / "systematic-debugging/agents/openai.yaml").read_text())
-            self.assertEqual((workflow / "helper.md").read_text(), "Use writing-plans.\n")
+            self.assertEqual((workflow / "helper.md").read_text(), "Use superpowers:writing-plans.\n")
             self.assertFalse((stage / "hooks").exists())
 
 

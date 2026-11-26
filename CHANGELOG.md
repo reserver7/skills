@@ -6,9 +6,21 @@ This file records release context that cannot be recovered from a list of pull r
 
 ## [Unreleased]
 
+## [0.6.2] — 2026-11-26
+
+### Added
+
+- A disposable local runner for replaying skill-routing scenarios against the current policy, with bilingual validation archives.
+
 ### Changed
 
-- Promote the skill-plan announcement from workflow guidance to the shared policy, including its informational-only behavior and announcing route changes.
+- Setup now preserves managed upstream skill bodies and existing invocation metadata. Grounded routing and authorization guidance lives in the shared policy instead of being injected into those upstream instructions.
+- Refined skill selection, OpenSpec/Superpowers handoffs, TDD evidence, completion-check triggers, artifact cleanup, and managed Playwright command fallback based on accumulated validation results.
+- Expanded the default policy budget from 6.5 KB to 14 KB and added regression coverage for its routing requirements.
+
+### Upgrade
+
+- Refresh the plugin source and rerun Grounded setup to apply the shared policy and restore current upstream skill bodies. Setup retains its managed backups.
 
 ## [0.6.0] — 2026-11-24
 

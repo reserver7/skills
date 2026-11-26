@@ -1,60 +1,61 @@
 # Development policy
 
-Follow user/project rules. Use the lightest workflow. Skip route skills and auto Jev.
+Follow user/project rules. Preserve upstream skill files.
+
+At fresh start, read applicable AGENTS.md before skill selection; name no skill until task evidence is reviewed. Call `ctx_resume` only when the user/task identifies an interrupted task with a recoverable record; context-mode availability, repo familiarity, or chat history alone do not qualify.
+
+## Before dependent work
+
+For existing work/reviews, preflight before skills: inspect active OpenSpec changes/decisions/specs/tasks (including ignored via ignore-aware search) and target code/config/dependencies/tests. Do not infer tech from names. Finish preflight before skill selection; never combine `SKILL.md` reads with that pass. Map owners to observed behavior and explicitly requested target surfaces, even if files/dependencies/source are absent; absence does not erase ownership. Cover affected/requested surfaces and matching material risks; use workflows only on permitted triggers. Include inherited trust boundaries even when enforcement files are unchanged. Match evidenced/requested tech/services to owner cues; read every matching skill before source fallback. Injected clients retain their service owner; blocked sources don't erase matches. Cover required roles before dependent work; Context7/workflows don't replace domain expertise. Open exact paths; don't enumerate directories. If unavailable, report it and pause only dependent work. Start/reuse OpenSpec for materially unresolved behavior/contracts or durable cross-system, authorization, or persistent-data tracking.
+
+If a required decision is pending, treat dependent work as blocked. A request to proceed or pick a default is insufficient. Resume only with explicit resolution from the authorized decision maker or an authoritative record. Until then, leave decision records unchanged and defer skills, edits, and tests for that slice unless a separate authorized review is requested. Continue independent work and routine reversible choices.
+
+Scope blockers narrowly. Before stopping, inspect remaining requested slices and execute every authorized one whose requirements are evidenced and do not depend on the blocker, including requested existing checks and required matched-skill reads. Do not invent substitutes or claim blocked work complete. Report completed and blocked slices, missing evidence, and the smallest unblock step; stop only when no independent work remains.
+
+Ask only for the earliest unresolved decision needed to unblock work. When decisions are sequential/conditional, request only the first required owner decision and wait; don't request later approvals in the same handoff. The closing request must name only that first owner decision; after the user replies, reassess any downstream approval. Do not bundle later decisions, defaults, or implementation parameters into that question; surface another blocker only after the first is resolved. Use the host's question schema or ask once in chat if delivery fails. If only blocked work remains, the final sentence must make a direct request addressed to the user (for example, ask them to provide or obtain the authorized decision/record). A status or conditional next step is not a request. Never ask the user to decide in place of that authority; name the owner.
 
 ## Skill selection
 
-Before acting, list chosen skills and role/reason (or say none); announce additions if the route changes. FYI; don't wait. For compound edits, check scope/risks, load each skill once, skip scans, name missing skills/fallbacks.
+Identify material outcomes and risks once, including in reviews. Choose the closest specialist for each distinct, evidenced behavior that materially changes or is under review, even when another skill covers the primary task. Workflow skills do not replace domain expertise. Work directly when skills add no value.
 
-- Clear bug: use the bug-fix procedure below; add no SDD unless requirements/design are materially uncertain.
-- Typo/style fix: edit and verify only; skip SDD, broad tests, reviews and Jev.
-- Multi-part work: agree scope/acceptance in chat; no plan file.
-- Version-sensitive edits/reviews/recommendations: before acting, resolve/query Context7 for pinned version/topic. SDK/API/CLI/cloud pins and CI tags count; keep private data out. If exact pin is unindexed, inspect its official release/tag or package artifact; nearest-version docs don't prove it. If unavailable, disclose the gap; don't claim verified.
-- API contracts (incl. compatible extensions): use Addy `api-and-interface-design`. Use OpenSpec for unresolved behavior.
-- Docs: use `doc-updater` for substantive updates/release notes, `docs-governance` for requested audits.
-- Performance: set baseline/target, then use Addy `performance-optimization`; claims need before/after measurements.
-- React/Next framework behavior changes: load Vercel `vercel-react-best-practices` for hooks/effects, rendering, data/routing/caching, or server/client boundaries. Skip typo/copy/docs and non-framework edits. Add `vercel-composition-patterns` for component API changes; Context7 for versioned APIs. `frontend-design` handles visual UI.
-- UI/accessibility review-only requests: always load `web-design-guidelines` before assessing; don't load `frontend-design` or edit files unless requested.
-- Auth, tenant access, trust boundaries or untrusted-input handling: use Addy `security-and-hardening`.
-- Review feedback: use `receiving-code-review` before edits. Use `systematic-debugging` for an existing defect, failing test, or unexplained behavior, not merely a planned behavior change.
-- MCP server changes: use `mcp-builder`. Supabase work: use `supabase`.
-- Observability changes: use Addy `observability-and-instrumentation`; incidents use debugging and the runbook.
-- Database changes: use ECC `database-migrations` for nontrivial schema/data migration planning and `mysql-patterns` only when the target is MySQL. Load the Postgres specialist before Postgres SQL changes.
-- CI/CD: Addy `ci-cd-and-automation` by default. Add ECC `deployment-patterns` for canary/blue-green/rolling rollout, automated abort/rollback gates, or coordinated migrations; ENG only for material release/data/security/test risk.
-- Use OpenSpec for materially uncertain behavior, cross-system contracts, authorization or persistent data; directory presence alone doesn't require SDD.
-- For contract, authorization, or persistent data work, inspect relevant active OpenSpec files directly, including ignored files. Reuse the active change and keep specs current.
-- Pending approval or unresolved behavior/data/contract/risk/rollback choices: ask once; wait before dependent edits/tests. Legal/regulatory needs authorized approval or formal waiver. Resume from agreed artifacts.
-- Read relevant OpenSpec specs, design, and `tasks.md` before changes. Follow its validation/archive workflow without duplicate PRDs or plans.
+Optimize quality per token: choose the smallest set of distinct skills and checks that fully meets correctness, risk, and acceptance needs. Carry valid evidence; add or rerun only for changed behavior, prior misses, uncovered risk, or requested broader coverage. Do not load overlapping guidance or repeat adequate context/evidence, and never omit needed expertise or a check solely to save tokens.
+
+After inspection, announce only selected skills/roles (or none); never preview candidates. Read each once and handle prerequisites before dependent work. Use Grounded's task triggers to decide whether to select a skill; a broad description or generic "always" wording does not broaden its trigger. Once selected, follow original instructions within permissions. Credit actual use. When asked to report skills, list every skill whose instructions were read and its distinct role; say if it yielded no actionable guidance. Resolve namespaced calls by installed name. Never enumerate/search `.agents/skills`; open matched `SKILL.md` by exact path, including ignored files. On invocation failure, read the installed file; if missing, query host inventory by exact name once. Reassess affected roles only after material changes.
+
+- Pure typo/copy fixes: edit and inspect. Honor explicit review or release requirements.
+- For a pinned library/API/CLI/cloud service or CI action used by the work, resolve/query Context7 for that version before dependent work. If unavailable or mismatched, fetch the exact official remote release, tag, or package artifact; if one route fails, try one other official exact-version source, using an available browser/search route if useful. Lack of a local installation is not unavailability, and unversioned current docs do not prove a pinned version. A task spec or acceptance test states intended/repository behavior, not external API support. Verify each library separately and report sources. If exact evidence remains unavailable, pause only API-dependent edits or claims and continue independent authorized work.
+- Public/external API or module contract: Addy `api-and-interface-design` for material new public interfaces or compatibility changes. Use the React specialist for internal composition.
+- Use ECC `doc-updater` for coordinated cross-document/contract changes (even short ones) or release notes needing source reconciliation. Direct-edit short factual changes only within one doc. Separate audit: `docs-governance`.
+- Use `vercel-react-best-practices` when changed React/Next components, hooks, rendering, routing, or broader integration rely on framework semantics. Component API/composition: `vercel-composition-patterns`. Framework-independent helpers: direct or own specialist. Visual creation/redesign: `frontend-design`. UI/accessibility review, even source-only: `web-design-guidelines`; no running page is required for source findings.
+- Measured performance investigation: `performance-optimization` with baseline and target.
+- Authentication, authorization (including workload identity/OIDC, CI token grants, and production credentials), untrusted input, or personal data: Addy `security-and-hardening`. Creating, migrating, or reviewing a tenant boundary or its schema also uses `security-and-hardening`, even when auth code or access policies are outside scope.
+- Logs, metrics, traces, alerts, or telemetry: `observability-and-instrumentation`. Add security for material trust boundaries or sensitive data.
+- Any Supabase product or SDK use, including an injected client/API or Realtime channel: use `supabase`, even when the edited file does not import the package. Postgres SQL/schema work, including read-only reviews of existing SQL, schemas, and migrations, uses the Supabase Postgres specialist. Nontrivial schema/data migration: ECC `database-migrations`; MySQL only: `mysql-patterns`.
+- CI workflow design, implementation, or review: Addy `ci-cd-and-automation`. Canary/progressive rollout, abort/rollback gates, or coordinated migration strategy: ECC `deployment-patterns`. Combine both when pipeline mechanics and rollout strategy each materially affect the result.
+- MCP server design, implementation, or review: `mcp-builder`. Review feedback: `receiving-code-review` before edits.
+- Browser checks: prefer project tools; if `playwright-cli` is unavailable, use the managed path in `docs/workflow.md`.
+- App automation: use `cli-hub-meta-skill` to find an existing CLI when current tools fall short. Use `cli-anything` for harness work when an existing CLI cannot meet the need.
+- Use `to-tickets` for requested ticket breakdown or publishing. Reuse agreed tasks and get explicit authorization before posting.
+- `craft-anything` is explicit-only for authorized portfolio reference work. Use Grounded Setup for managed installation and refresh.
+- Superpowers is opt-in. When explicitly selected, use `using-superpowers` as the gate before task-specific Superpowers procedures; then use only matching procedure/support skills. Do not load it for default Grounded work. CEO/ENG/ADR reviews are opt-in and never auto-chain. Suggest ENG for material release, data, security, or test risk. Use Jev for authorized concrete comparisons.
 
 ## Implementation
 
-- Ponytail is optional for direct edits, including bugs; skip it when Superpowers directs the edit. Keep scope minimal and validate.
-- Bug fixes: `systematic-debugging` owns reproduction/diagnosis. Check test-writing and execution permission separately. Use TDD for authorized nontrivial changes only if both are allowed. Reuse or add a focused test if allowed; prove the behavior fails before fixing. Preserve caller behavior; cover retries, expiry reclamation and atomic concurrency for side-effect/dedup changes. Report skipped checks.
-- Before interface/data refactors, map callers and observable behavior; preserve them or get approval. Test writing and execution have separate permissions; add contract tests only when allowed. Prose needs no TDD.
-- Before claiming success, use `verification-before-completion`; check deliverables/risks once, reuse valid evidence, rerun affected checks, and report omissions.
-- Prefer chat/OpenSpec; Superpowers is opt-in. If a route stalls, explain the gap and ask before switching. Preserve handoff/one active plan; subagents need approval; use worktrees only when needed.
-- Use `requesting-code-review` for substantial/risky work or on request. Alongside Addy, review distinct concerns only and merge duplicate findings. Skip trivial reviews; re-review changed findings only.
-
-## Interactive questions
-
-- Ask one decision at a time using the active host's schema. If unavailable or rejected, ask once in chat and wait; never repeat it or infer consent.
-
-## Optional reviews and decisions
-
-- `plan-review-ceo`: unsettled premise/scope; run its full scope challenge and alternatives.
-- `plan-review-eng`: material technical risk; run its full review and dependency analysis. Reuse CEO decisions.
-- Suggest reviews with a concrete reason; execute only when requested/accepted. Never auto-chain CEO, ENG, ADR and Jev. A named request authorizes that review only.
-- `adr`: record durable/cross-cutting or hard-to-reverse choices using its full interview, three perspectives and completeness gate. Feature-local choices stay in OpenSpec design. Link evidence; do not copy it.
-- Jev is optional; use only when enabled/authorized for concrete choices. Send facts/options/criteria, never secrets. Jev advises; user decides. Avoid repeat evaluations; disclose unavailability and keep credentials outside Git.
+- Ponytail is optional; use only when its minimal-diff role adds value beyond the selected specialist. Skip when Superpowers directs edits.
+- Existing bugs: read `systematic-debugging` to investigate a pre-existing reproducible defect or unexplained failure, even for a small fix. A failing test that only shows requested new behavior is absent is the expected red step; do not load debugging solely for that. Static findings-only review does not need debugging. Under a test freeze, trace the failing path within permissions.
+- Confirm necessary behavior at the actual entry point or exact dependency artifact. Pause dependent work or claims if a prerequisite remains unverified. Before changing an interface, map each removed option in actual callers to its observable effect, including styling, output, or errors. Preserve and check those effects unless a change is approved.
+- Reuse adequate regression tests. Use `test-driven-development` for nontrivial changes when tests are allowed; skip it for low-risk localized bugs with an exact existing focused test. Treat public API/module-contract behavior, trust boundaries, destructive or persistent data, concurrency/idempotency, external effects, and rollback as nontrivial regardless of size. For new deny/abort/no-side-effect behavior, baseline-test the exact result and side effect; existing tests count only if they assert that path. Check test permissions separately. Unless prohibited, run relevant focused tests after changes; edit-only limits writes, not checks. The TDD red step must be an assertion failure about missing behavior, not an error or setup failure; correct the test/harness before implementation. Post-fix tests are regression evidence, not red evidence.
+- Match focused checks to acceptance criteria and affected failure paths, including cleanup, retry, expiry, or concurrency. For structured input formats, test malformed structure and plausible structure with invalid field values, checking rejection before side effects. For behavior driven by a user or system action, exercise that path and assert its resulting state or output when allowed. A helper/unit test does not verify the caller's component, hook, route, or integration lifecycle unless it exercises that boundary. A passing test supports only the boundary it executed; report higher untested behavior as code-reviewed but unverified. Static or server-rendered output from initial props does not verify an event-driven transition. If available tooling or permissions prevent the check, mark it unverified and narrow completion claims; do not infer interaction behavior from initial markup. Add or adapt a focused check for an affected behavior the existing suite misses when allowed. Reuse valid evidence; for identical coverage at one revision, run either the focused test or project suite, not both unless acceptance requires both. Report material runtime, integration, dependency, or review gaps. After test/tool runs, inspect the worktree diff; remove generated artifacts outside scope and report all remaining changed files. Limit claims to what mocks, static checks, or synthetic workloads cover. Diagnose failures before retrying and report persistent host limits.
+- Use `verification-before-completion` only for a requested requirement-by-requirement acceptance audit of a deliverable, before commits/PRs, or for delegated implementation. A request to run a focused check, test scenarios, or validate skill routing uses the relevant domain/project checks. Do not load it solely because tests/checks ran or a completion report is next; if no listed trigger applies, do not call it. For code review, use `requesting-code-review` under the triggers below; do not also load completion verification solely to repeat its requirements/diff pass.
+- If a route stalls, report the gap before changing workflow. Keep one active plan; subagents need user approval.
+- Load `requesting-code-review` whenever asked to review source/code, even when framed as a security, UX, or other domain review; it covers requirements, base/diff, callers/tests, and verdict. Add the matching domain specialist for distinct analysis. Also use it for material implementation risks: any auth/authz, tenant-isolation or other trust-boundary change/fix, sensitive-data handling, destructive migration, external side effect, or release, regardless of patch size. Read it without delegation; use one authorized independent reviewer when available, otherwise review separately and disclose that it was not independent. Reuse findings, obtain required signoff, and re-review only changed findings.
 
 ## Context and completion
 
-Read relevant code/contracts and prior decisions; preserve correctness/security checks.
-
-The installed skills are a curated subset. Do not install/activate full overlapping plugins alongside them. User instructions outrank this policy; do not silently bypass contradictory project rules.
+Read relevant contracts and decisions. Before claiming completion, match each material requirement to evidence, including preserved behavior. Mark only supported OpenSpec tasks complete. Disclose missing required checks and whether independent review occurred when required.
 
 ## Commit messages
 
-Use Conventional Commits (`feat|fix|docs|refactor|test|chore|build|ci|perf|revert`), imperative summary, and `!` for breaking changes.
+Use Conventional Commits with imperative summaries and `!` for breaking changes.
 
-For releases, follow the repository's version/tag scheme. Sync manifests before tagging; reject mismatches and build from the tag. GitHub Release doesn't publish a marketplace update. For Grounded, use `setup/release.py` and its instructions.
+Grounded releases: use `setup/release.py`, sync manifests, and build from the matching tag.
